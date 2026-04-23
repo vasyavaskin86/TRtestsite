@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <title>Мои заказы — СТАРТ</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+  <header class="site-header">
+    <div class="container header-inner">
+      <div class="logo" onclick="window.location.href='index.html'">
+        <img width="65%" height="20%" src="img\logo (2).png" alt="logo">
+      </div>
+      <nav class="main-nav">
+        <a href="#catalog">Каталог</a>
+        <a href="services.html">Услуги</a>
+        <a href="#about">О нас</a>
+        <a href="#contacts">Контакты</a>
+      </nav>
+      <div class="header-actions">
+        <a class="pill" href="cart.html" aria-label="Корзина">
+          Корзина <span class="badge" id="cartCount">0</span>
+        </a>
+        <a class="pill hidden" id="myOrdersLink" href="my-orders.html">Мои заказы</a>
+        <button class="pill pill-muted" id="authButton" type="button">Войти</button>
+        <button class="pill pill-muted hidden" id="logoutButton" type="button">Выйти</button>
+        <a class="admin-link hidden" href="admin.html">Админ-панель</a>
+      </div>
+    </div>
+  </header>
+  <main class="catalog">
+    <div class="container">
+      <header class="section-header">
+        <h2>Мои заказы</h2>
+        <p>История ваших оформленных заказов и текущие статусы.</p>
+      </header>
+      <div id="myOrdersList" class="admin-products-list"></div>
+    </div>
+  </main>
+  <footer class="site-footer">
+    <div class="container footer-inner">
+      <p>&copy; <span id="year"></span> СТАРТ</p>
+      <a href="admin.html" class="footer-admin-link hidden">Админ-панель</a>
+    </div>
+  </footer>
+  <script src="js/api.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/cart.js"></script>
+  <script src="js/script.js"></script>
+  <script src="js/myOrdersPage.js"></script>
+</body>
+</html>

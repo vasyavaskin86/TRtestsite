@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <title>Админ-панель — Спортивный магазин</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="css/styles.css" />
+  <link rel="stylesheet" href="css/admin.css" />
+</head>
+<body class="admin-body">
+  <header class="site-header">
+    <div class="container header-inner">
+      <div class="logo" onclick="window.location.href='index.html'">
+        <img width="65%" height="20%" src="img\logo (2).png" alt="logo">
+      </div>
+      <nav class="main-nav">
+        <a href="index.html#catalog">Каталог</a>
+        <a href="services.html">Услуги</a>
+        <a href="index.html#about">О нас</a>
+        <a href="index.html#contacts">Контакты</a>
+      </nav>
+      <div class="header-actions">
+        <a class="pill" href="cart.html" aria-label="Корзина">
+          Корзина <span class="badge" id="cartCount">0</span>
+        </a>
+        <button class="pill pill-muted" id="authButton" type="button">Войти</button>
+        <button class="pill pill-muted hidden" id="logoutButton" type="button">Выйти</button>
+        <a class="admin-link hidden" href="admin.html">Админ-панель</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="admin-main">
+    <div class="container admin-layout">
+      <section class="admin-panel">
+        <header class="section-header">
+          <h1>Управление товарами</h1>
+          <p>Добавляйте, редактируйте и удаляйте карточки товаров. Изменения сохраняются на сервере.</p>
+        </header>
+
+        <form id="productForm" class="admin-form">
+          <input type="hidden" id="productId" />
+
+          <div class="form-grid">
+            <label>
+              Название товара *
+              <input type="text" id="productName" required />
+            </label>
+
+            <label>
+              Категория *
+              <select id="productCategory" required>
+                <option value="">Выберите категорию</option>
+                <option value="bicycles">Велосипеды</option>
+                <option value="scooters">Самокаты</option>
+                <option value="rollers">Ролики</option>
+                <option value="parts">Запчасти</option>
+                <option value="accessories">Аксессуары</option>
+              </select>
+            </label>
+
+            <label>
+              Цена (₽) *
+              <input type="number" id="productPrice" required />
+            </label>
+
+            <label>
+              URL изображения
+              <input type="url" id="productImage" placeholder="https://example.com/image.jpg" />
+            </label>
+          </div>
+
+          <label>
+            Краткое описание *
+            <textarea id="productDescription" rows="3" required></textarea>
+          </label>
+
+          <label>
+            Полное описание (для страницы товара)
+            <textarea id="productFullDescription" rows="6" placeholder="Можно писать в несколько абзацев."></textarea>
+          </label>
+
+          <label>
+            Остатки по складам (по строкам: НазваниеСклада:Количество)
+            <textarea id="productWarehouseStocks" rows="4" placeholder="Основной:5&#10;Магазин 2:2"></textarea>
+          </label>
+
+          <label>
+            Фотографии (до 10 URL, по одному в строке)
+            <textarea id="productImages" rows="5" placeholder="https://...\nhttps://...\n..."></textarea>
+          </label>
+
+          <label>
+            Загрузить фото с компьютера (до 10 шт)
+            <input type="file" id="productImageFiles" accept="image/*" multiple />
+          </label>
+
+          <div id="imagesPreview" class="images-preview hidden" aria-label="Предпросмотр изображений"></div>
+
+          <div id="bikeFields" class="bike-fields hidden">
+            <div class="section-header small">
+              <h3>Параметры велосипеда</h3>
+              <p>Эти поля применяются только для категории «Велосипеды».</p>
+            </div>
+
+            <div class="form-grid">
+              <label>
+                Производитель (бренд)
+                <input type="text" id="bikeManufacturer" placeholder="Trek / Giant / Cube..." />
+              </label>
+
+              <label>
+                Диаметр колеса (дюймы)
+                <input type="number" id="bikeWheelDiameter" min="12" max="36" step="0.5" placeholder="29" />
+              </label>
+
+              <label>
+                Размер рамы
+                <input type="text" id="bikeFrameSize" placeholder="S / M / L или 17&quot;" />
+              </label>
+
+              <label>
+                Цвет
+                <input type="text" id="bikeColor" placeholder="Чёрный / Белый / Красный..." />
+              </label>
+
+              <label>
+                Тип тормозов
+                <input type="text" id="bikeBrakeType" placeholder="Дисковые / Ободные..." />
+              </label>
+
+              <label>
+                Подвеска
+                <input type="text" id="bikeSuspension" placeholder="Жёсткая / Передняя / Двухподвес..." />
+              </label>
+            </div>
+          </div>
+
+          <div class="form-actions">
+            <button type="submit" class="btn btn-primary" id="saveButton">Сохранить товар</button>
+            <button type="button" class="btn btn-secondary" id="resetButton">Очистить форму</button>
+          </div>
+        </form>
+
+        <section class="bike-fields" style="margin-top: 12px;">
+          <div class="section-header small">
+            <h3>Импорт товаров</h3>
+            <p>CSV формат: name,category,price,description,image</p>
+          </div>
+          <label>
+            CSV файл
+            <input type="file" id="productsCsvFile" accept=".csv,text/csv" />
+          </label>
+          <div class="form-actions">
+            <button type="button" class="btn btn-secondary" id="importCsvButton">Импортировать CSV</button>
+          </div>
+        </section>
+      </section>
+
+      <section class="admin-list">
+        <header class="section-header small">
+          <h2>Список товаров</h2>
+          <div class="admin-list-controls">
+            <span id="productsCount">0 товаров</span>
+            <button type="button" class="btn btn-danger btn-small" id="clearAllButton">
+              Очистить все товары
+            </button>
+          </div>
+        </header>
+
+        <div id="adminProductsList" class="admin-products-list">
+          <!-- Список товаров рендерится из JS -->
+        </div>
+      </section>
+
+      <section class="admin-list" style="margin-top: 22px;">
+        <header class="section-header small">
+          <h2>Настройки магазина</h2>
+        </header>
+        <form id="settingsForm" class="admin-form">
+          <div class="form-grid">
+            <label><input type="checkbox" id="settingEnableOnlinePayment" /> Включить онлайн-оплату</label>
+            <label><input type="checkbox" id="settingEnableDeliveryForm" /> Включить блок доставки в заказе</label>
+            <label><input type="checkbox" id="settingEnableWarehouseStocks" /> Показывать остатки по складам</label>
+            <label><input type="checkbox" id="settingEnable1CIntegration" /> Режим подготовки к 1С (без реального подключения)</label>
+            <label><input type="checkbox" id="settingEnableNotifications" /> Включить уведомления о заказах</label>
+            <label>
+              Канал уведомлений
+              <select id="settingNotificationProvider">
+                <option value="vk">VK webhook</option>
+                <option value="max">MAX webhook</option>
+              </select>
+            </label>
+            <label style="grid-column: 1 / -1;">
+              URL webhook для уведомлений
+              <input type="url" id="settingNotificationWebhookUrl" placeholder="https://..." />
+            </label>
+          </div>
+          <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Сохранить настройки</button>
+          </div>
+          <div class="empty-state" style="margin-top: 6px;">
+            <strong>Пример payload для webhook:</strong><br>
+            <code>{"provider":"vk|max","text":"Новый заказ ...","orderId":"...","total":12345}</code>
+          </div>
+        </form>
+      </section>
+
+      <section class="admin-list" style="margin-top: 22px;">
+        <header class="section-header small">
+          <h2>Карусель на главной</h2>
+          <div class="admin-list-controls">
+            <span id="carouselCount">0 слайдов</span>
+            <button type="button" class="btn btn-danger btn-small" id="clearCarouselButton">
+              Очистить карусель
+            </button>
+          </div>
+        </header>
+
+        <form id="carouselForm" class="admin-form">
+          <input type="hidden" id="carouselSlideId" />
+          <div class="form-grid">
+            <label>
+              Тип *
+              <select id="carouselKind" required>
+                <option value="new">Новинки</option>
+                <option value="sale">Акция</option>
+                <option value="news">Новости</option>
+              </select>
+            </label>
+            <label>
+              Заголовок *
+              <input type="text" id="carouselTitle" maxlength="80" required />
+            </label>
+            <label>
+              Текст *
+              <input type="text" id="carouselText" maxlength="160" required />
+            </label>
+            <label>
+              Картинка (URL)
+              <input type="url" id="carouselImageUrl" placeholder="https://example.com/banner.jpg" />
+            </label>
+            <label>
+              Картинка файлом
+              <input type="file" id="carouselImageFile" accept="image/*" />
+            </label>
+            <label>
+              Масштаб картинки
+              <select id="carouselImageFit">
+                <option value="auto">Авто</option>
+                <option value="cover">Заполнить</option>
+                <option value="contain">Вместить</option>
+              </select>
+            </label>
+            <label>
+              Текст кнопки
+              <input type="text" id="carouselButtonLabel" placeholder="Например: Смотреть" />
+            </label>
+            <label>
+              Ссылка кнопки (тип)
+              <select id="carouselButtonHref">
+                <option value="#catalog">Все товары</option>
+                <option value="category:bicycles">Группа: велосипеды</option>
+                <option value="category:scooters">Группа: самокаты</option>
+                <option value="category:rollers">Группа: ролики</option>
+                <option value="category:parts">Группа: запчасти</option>
+                <option value="category:accessories">Группа: аксессуары</option>
+                <option value="#promotions">Акции</option>
+                <option value="#news">Новости</option>
+                <option value="custom">Произвольная ссылка</option>
+              </select>
+            </label>
+            <label id="carouselCustomHrefWrap" class="hidden">
+              Произвольная ссылка
+              <input type="text" id="carouselCustomHref" placeholder="#catalog или product.html?id=..." />
+            </label>
+          </div>
+
+          <div id="carouselImagePreview" class="images-preview hidden" aria-label="Предпросмотр картинки слайда"></div>
+
+          <div class="form-actions">
+            <button type="submit" class="btn btn-primary" id="carouselSaveButton">Сохранить слайд</button>
+            <button type="button" class="btn btn-secondary" id="carouselResetButton">Очистить</button>
+          </div>
+        </form>
+
+        <div id="carouselSlidesList" class="admin-products-list" style="margin-top: 10px;">
+          <!-- Слайды карусели рендерятся из JS -->
+        </div>
+      </section>
+
+      <section class="admin-list" style="margin-top: 22px;">
+        <header class="section-header small">
+          <h2>Услуги веломастерской</h2>
+          <div class="admin-list-controls">
+            <span id="servicesCount">0 услуг</span>
+            <button type="button" class="btn btn-danger btn-small" id="clearServicesButton">Очистить услуги</button>
+          </div>
+        </header>
+        <form id="serviceForm" class="admin-form">
+          <input type="hidden" id="serviceId" />
+          <div class="form-grid">
+            <label>
+              Название услуги *
+              <input type="text" id="serviceName" maxlength="100" required />
+            </label>
+            <label>
+              Цена (₽) *
+              <input type="number" id="servicePrice" required />
+            </label>
+            <label>
+              Картинка (URL)
+              <input type="url" id="serviceImage" />
+            </label>
+          </div>
+          <label>
+            Описание (необязательно)
+            <textarea id="serviceDescription" rows="3" maxlength="250"></textarea>
+          </label>
+          <div class="form-actions">
+            <button type="submit" class="btn btn-primary" id="serviceSaveButton">Сохранить услугу</button>
+            <button type="button" class="btn btn-secondary" id="serviceResetButton">Очистить</button>
+          </div>
+        </form>
+        <div id="servicesList" class="admin-products-list" style="margin-top: 10px;"></div>
+      </section>
+
+      <section class="admin-list" style="margin-top: 22px;">
+        <header class="section-header small">
+          <h2>Акции</h2>
+          <div class="admin-list-controls">
+            <span id="promoCount">0 акций</span>
+            <button type="button" class="btn btn-danger btn-small" id="clearPromotionsButton">Очистить акции</button>
+          </div>
+        </header>
+        <form id="promotionForm" class="admin-form">
+          <input type="hidden" id="promotionId" />
+          <div class="form-grid">
+            <label>
+              Заголовок *
+              <input type="text" id="promotionTitle" maxlength="90" required />
+            </label>
+            <label>
+              Скидка (%) (необязательно)
+              <input type="number" id="promotionDiscount" min="1" max="99" />
+            </label>
+            <label>
+              Картинка (URL)
+              <input type="url" id="promotionImage" />
+            </label>
+            <label>
+              Ссылка
+              <input type="text" id="promotionLink" placeholder="#catalog или product.html?id=..." />
+            </label>
+          </div>
+          <label>
+            Описание *
+            <textarea id="promotionDescription" rows="3" maxlength="180" required></textarea>
+          </label>
+          <div class="form-actions">
+            <button type="submit" class="btn btn-primary" id="promotionSaveButton">Сохранить акцию</button>
+            <button type="button" class="btn btn-secondary" id="promotionResetButton">Очистить</button>
+          </div>
+        </form>
+        <div id="promotionsList" class="admin-products-list" style="margin-top: 10px;"></div>
+      </section>
+
+      <section class="admin-list" style="margin-top: 22px;">
+        <header class="section-header small">
+          <h2>Новости</h2>
+          <div class="admin-list-controls">
+            <span id="newsCount">0 новостей</span>
+            <button type="button" class="btn btn-danger btn-small" id="clearNewsButton">Очистить новости</button>
+          </div>
+        </header>
+        <form id="newsForm" class="admin-form">
+          <input type="hidden" id="newsId" />
+          <div class="form-grid">
+            <label>
+              Заголовок *
+              <input type="text" id="newsTitle" maxlength="90" required />
+            </label>
+            <label>
+              Дата *
+              <input type="date" id="newsDate" required />
+            </label>
+          </div>
+          <label>
+            Текст новости *
+            <textarea id="newsText" rows="4" maxlength="260" required></textarea>
+          </label>
+          <div class="form-actions">
+            <button type="submit" class="btn btn-primary" id="newsSaveButton">Сохранить новость</button>
+            <button type="button" class="btn btn-secondary" id="newsResetButton">Очистить</button>
+          </div>
+        </form>
+        <div id="newsAdminList" class="admin-products-list" style="margin-top: 10px;"></div>
+      </section>
+
+      <section class="admin-list" style="margin-top: 22px;">
+        <header class="section-header small">
+          <h2>Заказы</h2>
+          <div class="admin-list-controls">
+            <span id="ordersCount">0 заказов</span>
+          </div>
+        </header>
+        <div id="ordersAdminList" class="admin-products-list"></div>
+      </section>
+    </div>
+  </main>
+
+  <div id="orderModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-backdrop" data-order-close="true"></div>
+    <div class="modal-dialog" role="dialog" aria-modal="true" aria-label="Детали заказа">
+      <div class="modal-header">
+        <div class="modal-title" id="orderModalTitle">Заказ</div>
+        <button class="icon-btn" type="button" data-order-close="true" aria-label="Закрыть">✕</button>
+      </div>
+      <div class="modal-body">
+        <div id="orderModalBody"></div>
+      </div>
+    </div>
+  </div>
+
+  <footer class="site-footer admin-footer">
+    <div class="container footer-inner">
+      <p>Админ-панель СТАРТ</p>
+      <a href="index.html" class="footer-admin-link">Вернуться на сайт</a>
+    </div>
+  </footer>
+
+  <script src="js/api.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/cart.js"></script>
+  <script src="js/admin.js"></script>
+</body>
+</html>
+

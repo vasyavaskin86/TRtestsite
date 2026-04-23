@@ -1,0 +1,373 @@
+{
+  "users": [
+    {
+      "id": "d6e883c4-9bc9-4302-bc61-048a9372e078",
+      "name": "Администратор",
+      "email": "admin@start.ru",
+      "passwordHash": "$2a$10$yd7jFTkI/jBad56PYlcd2eHNlanobohXQ9k2yM8RKZuhXLAEkM3dm",
+      "isAdmin": true,
+      "createdAt": 1776411835637
+    },
+    {
+      "id": "8fa6dbd8-bb0f-4d21-925b-76083e785e01",
+      "name": "testUser",
+      "email": "test@mail.ru",
+      "passwordHash": "$2a$10$PUJs3u8Wb63pbj4GdDeo/uIOYSEVYlL0gYroZC0CCbBfmvunJv53u",
+      "isAdmin": false,
+      "createdAt": 1776413800176
+    }
+  ],
+  "products": [
+    {
+      "id": "vk-15290599",
+      "name": "Самокат Comfort 210 Evolution",
+      "category": "scooters",
+      "price": 14990,
+      "image": "",
+      "description": "Импортировано из каталога VK: СТАРТ - спортивные товары!"
+    },
+    {
+      "id": "vk-15290590",
+      "name": "Самокат City Scooter Disk Brake",
+      "category": "scooters",
+      "price": 16990,
+      "image": "",
+      "description": "Импортировано из каталога VK: СТАРТ - спортивные товары!"
+    },
+    {
+      "id": "vk-15290574",
+      "name": "Самокат Comfort 180 Evolution",
+      "category": "scooters",
+      "price": 13990,
+      "image": "",
+      "description": "Импортировано из каталога VK: СТАРТ - спортивные товары!"
+    },
+    {
+      "id": "vk-15290569",
+      "name": "Самокат Comfort 145 Evolution Lux",
+      "category": "scooters",
+      "price": 12490,
+      "image": "",
+      "description": "Импортировано из каталога VK: СТАРТ - спортивные товары!"
+    },
+    {
+      "id": "vk-15290560",
+      "name": "Самокат Comfort 145 Evolution",
+      "category": "scooters",
+      "price": 11990,
+      "image": "",
+      "description": "Импортировано из каталога VK: СТАРТ - спортивные товары!"
+    },
+    {
+      "id": "vk-15290542",
+      "name": "Самокат Comfort 125 Evolution Lux",
+      "category": "scooters",
+      "price": 10990,
+      "image": "",
+      "description": "Импортировано из каталога VK: СТАРТ - спортивные товары!"
+    },
+    {
+      "id": "vk-15290537",
+      "name": "Самокат Comfort 125 Evolution",
+      "category": "scooters",
+      "price": 9990,
+      "image": "",
+      "description": "Импортировано из каталога VK: СТАРТ - спортивные товары!"
+    },
+    {
+      "id": "vk-15291096",
+      "name": "Tech Team Rainbow 125",
+      "category": "scooters",
+      "price": 8990,
+      "image": "",
+      "description": "Импортировано из каталога VK: СТАРТ - спортивные товары!"
+    },
+    {
+      "id": "vk-15290227",
+      "name": "STELS Pilot 760 24\"",
+      "category": "bicycles",
+      "price": 25990,
+      "image": "",
+      "description": "Импортировано из каталога VK: СТАРТ - спортивные товары!",
+      "attributes": {
+        "manufacturer": "STELS",
+        "wheelDiameter": 24
+      }
+    },
+    {
+      "id": "vk-15290213",
+      "name": "Велосипед VARMA Шторм Storm 29\"",
+      "category": "bicycles",
+      "price": 32990,
+      "image": "",
+      "description": "Импортировано из каталога VK: СТАРТ - спортивные товары!",
+      "attributes": {
+        "manufacturer": "VARMA",
+        "wheelDiameter": 29
+      }
+    },
+    {
+      "id": "vk-15290169",
+      "name": "Детский велосипед TT Forca 20 2024",
+      "category": "bicycles",
+      "price": 19990,
+      "image": "",
+      "description": "Импортировано из каталога VK: СТАРТ - спортивные товары!",
+      "attributes": {
+        "manufacturer": "Tech Team",
+        "wheelDiameter": 20
+      }
+    },
+    {
+      "id": "3cc0f614-68a7-4bc2-99c4-6a140c4cc2ee",
+      "name": "Велосипед",
+      "category": "bicycles",
+      "price": 15200,
+      "image": "",
+      "description": "Велосипед",
+      "attributes": {}
+    }
+  ],
+  "carouselSlides": [
+    {
+      "id": "5ef62b99-a350-4d9e-831b-dcaefbea4209",
+      "kind": "new",
+      "title": "Заголовок",
+      "text": "Текст слайд 1",
+      "imageFit": "auto",
+      "buttonLabel": "Посмотреть",
+      "buttonHref": "product.html?id=vk-15290599",
+      "updatedAt": 1776419326078
+    },
+    {
+      "id": "cdb1297b-1338-4202-bae5-c3b47a266dd6",
+      "kind": "new",
+      "title": "Заголовок",
+      "text": "Текст слайд 2",
+      "imageFit": "auto",
+      "updatedAt": 1776418905789
+    },
+    {
+      "id": "a434a325-9713-4975-aed8-57bc778da43f",
+      "kind": "new",
+      "title": "Заголовок",
+      "text": "Текст слайд 3",
+      "imageFit": "auto",
+      "buttonLabel": "Смотреть",
+      "buttonHref": "category:bicycles",
+      "updatedAt": 1776420755426
+    }
+  ],
+  "promotions": [
+    {
+      "id": "d9f280c4-b961-4224-8c6a-79ef4b9370e8",
+      "title": "Первое ТО бесплатно",
+      "discount": 99,
+      "description": "Первое ТО после 30 дней использования бесплатно",
+      "link": "#catalog"
+    },
+    {
+      "id": "1ff486af-50a6-4ee9-868c-f68d8dcf7cf4",
+      "title": "Первое ТО бесплатно",
+      "description": "Бесплатное ТО",
+      "link": "#catalog"
+    }
+  ],
+  "news": [
+    {
+      "id": "665bc265-4b7e-43cd-bc30-f217480f94b0",
+      "title": "Новость 1",
+      "date": "2026-04-17",
+      "text": "Новость 1"
+    }
+  ],
+  "orders": [
+    {
+      "id": "25997d0d-77ce-4ca7-bda6-928f3738d419",
+      "userId": "8fa6dbd8-bb0f-4d21-925b-76083e785e01",
+      "userName": "testUser",
+      "userEmail": "test@mail.ru",
+      "customerName": "Андрей",
+      "customerEmail": "welecih873@harkonin.com",
+      "customerPhone": "+79200547893",
+      "phone": "+79200547893",
+      "paymentMethod": "cash",
+      "deliveryAddress": "",
+      "deliveryComment": "",
+      "status": "processing",
+      "items": [
+        {
+          "productId": "vk-15290590",
+          "qty": 1,
+          "name": "Самокат City Scooter Disk Brake",
+          "price": 16990
+        },
+        {
+          "productId": "vk-15290574",
+          "qty": 1,
+          "name": "Самокат Comfort 180 Evolution",
+          "price": 13990
+        }
+      ],
+      "total": 30980,
+      "createdAt": 1776431491005,
+      "updatedAt": 1776431540568
+    },
+    {
+      "id": "d7107271-db30-4fdb-8805-b706d15b6174",
+      "userId": "8fa6dbd8-bb0f-4d21-925b-76083e785e01",
+      "userName": "testUser",
+      "userEmail": "test@mail.ru",
+      "customerName": "Магомед",
+      "customerEmail": "makhmood8846@gmail.com",
+      "customerPhone": "+79856254125",
+      "paymentMethod": "cash",
+      "deliveryAddress": "",
+      "deliveryComment": "",
+      "status": "new",
+      "items": [
+        {
+          "productId": "vk-15290590",
+          "qty": 1,
+          "name": "Самокат City Scooter Disk Brake",
+          "price": 16990
+        },
+        {
+          "productId": "vk-15290169",
+          "qty": 1,
+          "name": "Детский велосипед TT Forca 20 2024",
+          "price": 19990
+        },
+        {
+          "productId": "vk-15290227",
+          "qty": 1,
+          "name": "STELS Pilot 760 24\"",
+          "price": 25990
+        }
+      ],
+      "total": 62970,
+      "createdAt": 1776423798227,
+      "updatedAt": 1776423798227
+    },
+    {
+      "id": "150bb6a2-91cb-4e6a-9d95-0d97e6c8bb21",
+      "userId": "d6e883c4-9bc9-4302-bc61-048a9372e078",
+      "userName": "Администратор",
+      "userEmail": "admin@start.ru",
+      "customerName": "Андрей",
+      "customerEmail": "welecih873@harkonin.com",
+      "customerPhone": "+79200547893",
+      "paymentMethod": "cash",
+      "deliveryAddress": "",
+      "deliveryComment": "",
+      "status": "new",
+      "items": [
+        {
+          "productId": "vk-15290590",
+          "qty": 2,
+          "name": "Самокат City Scooter Disk Brake",
+          "price": 16990
+        }
+      ],
+      "total": 33980,
+      "createdAt": 1776422907375,
+      "updatedAt": 1776422907375
+    },
+    {
+      "id": "54eddb2b-11d0-4355-bcf2-1199c8f24543",
+      "userId": "d6e883c4-9bc9-4302-bc61-048a9372e078",
+      "userName": "Администратор",
+      "userEmail": "admin@start.ru",
+      "status": "new",
+      "items": [
+        {
+          "productId": "vk-15290590",
+          "qty": 1,
+          "name": "Самокат City Scooter Disk Brake",
+          "price": 16990
+        }
+      ],
+      "total": 16990,
+      "createdAt": 1776422348312,
+      "updatedAt": 1776422348312
+    },
+    {
+      "id": "49e06156-befd-4e0c-a2c5-577081378eb0",
+      "userId": "8fa6dbd8-bb0f-4d21-925b-76083e785e01",
+      "userName": "testUser",
+      "userEmail": "test@mail.ru",
+      "status": "new",
+      "items": [
+        {
+          "productId": "vk-15290542",
+          "qty": 1,
+          "name": "Самокат Comfort 125 Evolution Lux",
+          "price": 10990
+        }
+      ],
+      "total": 10990,
+      "createdAt": 1776421648778,
+      "updatedAt": 1776421648778
+    },
+    {
+      "id": "75c4e3be-8fdd-4464-8431-c6abb6d78cf9",
+      "userId": "d6e883c4-9bc9-4302-bc61-048a9372e078",
+      "userName": "Администратор",
+      "userEmail": "admin@start.ru",
+      "status": "new",
+      "items": [
+        {
+          "productId": "vk-15290599",
+          "qty": 1,
+          "name": "Самокат Comfort 210 Evolution",
+          "price": 14990
+        }
+      ],
+      "total": 14990,
+      "createdAt": 1776421446809,
+      "updatedAt": 1776421446809
+    },
+    {
+      "id": "16ff47bb-1169-42df-b1df-5ac7fd74132a",
+      "userId": "d6e883c4-9bc9-4302-bc61-048a9372e078",
+      "userName": "Администратор",
+      "userEmail": "admin@start.ru",
+      "status": "new",
+      "items": [
+        {
+          "productId": "1f5dd2a4-9cd6-4201-9413-d32c8ae6dc1d",
+          "qty": 1,
+          "name": "Велосипед",
+          "price": 12500
+        }
+      ],
+      "total": 12500,
+      "createdAt": 1776412120328,
+      "updatedAt": 1776419030571
+    }
+  ],
+  "services": [
+    {
+      "id": "e85c4ea7-5432-47a4-ab3d-af04b8b285ee",
+      "name": "Настройка тормоза",
+      "price": 400,
+      "updatedAt": 1776422567853
+    },
+    {
+      "id": "02119ba4-62b5-4bec-bcce-aefbed2239f5",
+      "name": "Настройка тормоза",
+      "description": "описание",
+      "price": 400,
+      "updatedAt": 1776423221472
+    }
+  ],
+  "settings": {
+    "enableOnlinePayment": false,
+    "enableDeliveryForm": false,
+    "enableNotifications": false,
+    "notificationProvider": "vk",
+    "notificationWebhookUrl": "",
+    "enableWarehouseStocks": true,
+    "enable1CIntegration": false
+  }
+}

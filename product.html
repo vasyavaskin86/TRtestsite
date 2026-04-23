@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <title>Товар — СТАРТ</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+  <header class="site-header">
+    <div class="container header-inner">
+      <div class="logo" onclick="window.location.href='index.html'">
+        <img width="65%" height="20%" src="img\logo (2).png" alt="logo">
+      </div>
+      <nav class="main-nav">
+        <a href="index.html#catalog">Каталог</a>
+        <a href="services.html">Услуги</a>
+        <a href="index.html#about">О нас</a>
+        <a href="index.html#contacts">Контакты</a>
+      </nav>
+      <div class="header-actions">
+        <a class="pill hidden" id="wishlistLink" href="index.html#wishlist" aria-label="Избранное">
+          ❤ <span class="badge" id="wishlistCount">0</span>
+        </a>
+        <a class="pill" href="cart.html" aria-label="Корзина">
+          Корзина <span class="badge" id="cartCount">0</span>
+        </a>
+        <a class="pill hidden" id="myOrdersLink" href="my-orders.html">Мои заказы</a>
+        <button class="pill pill-muted" id="authButton" type="button">Войти</button>
+        <button class="pill pill-muted hidden" id="logoutButton" type="button">Выйти</button>
+        <a class="admin-link hidden" href="admin.html">Админ-панель</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="catalog">
+    <div class="container">
+      <div id="productNotFound" class="empty-state hidden">
+        <p>Товар не найден. Вернитесь в <a class="link" href="index.html#catalog">каталог</a>.</p>
+      </div>
+
+      <section id="productSection" class="product-page hidden">
+        <header class="section-header">
+          <div class="page-top-actions">
+            <button class="pill pill-muted" id="backButton" type="button">← Назад</button>
+            <button class="pill pill-muted hidden" id="editProductButton" type="button">✎ Редактировать</button>
+          </div>
+
+          <nav class="breadcrumbs" id="breadcrumbs">
+            <a href="index.html">Главная</a>
+            <span class="sep">/</span>
+            <span id="breadcrumbCategory">Категория</span>
+            <span class="sep">/</span>
+            <span id="breadcrumbProduct" class="active">Товар</span>
+          </nav>
+
+          <h2 id="productTitle">Товар</h2>
+          <p id="productSubtitle" class="pill-muted"></p>
+        </header>
+
+        <div class="product-layout">
+          <div class="product-gallery">
+            <div id="mainPhoto" class="product-main-photo">
+              <button class="wishlist-btn" id="productPageWishlist" type="button" aria-label="В избранное">
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+              </button>
+            </div>
+            <div class="product-thumbs" id="thumbs"></div>
+          </div>
+
+          <aside class="product-side">
+            <div class="product-buy">
+              <div class="product-buy-price" id="productPrice">0 ₽</div>
+              <button class="btn btn-primary" id="addToCartButton" type="button">В корзину</button>
+            </div>
+
+            <div class="product-specs">
+              <h3>Характеристики</h3>
+              <dl id="specsList" class="specs-list"></dl>
+            </div>
+          </aside>
+        </div>
+
+        <section class="product-description-full">
+          <h3>Описание</h3>
+          <div id="fullDescription" class="prose"></div>
+        </section>
+
+        <section id="relatedProductsSection" class="catalog hidden">
+          <header class="section-header small">
+            <h3>Похожие товары</h3>
+            <p>Возможно, вас это заинтересует</p>
+          </header>
+          <div id="relatedProductsGrid" class="products-grid"></div>
+        </section>
+
+        <section class="product-reviews">
+          <header class="section-header small">
+            <h3>Отзывы покупателей</h3>
+            <button class="pill pill-muted" id="addReviewBtn">Оставить отзыв</button>
+          </header>
+          
+          <div id="reviewForm" class="review-form hidden">
+            <div class="rating-input">
+              <span>Ваша оценка:</span>
+              <div class="stars" id="starInput">
+                <span data-value="1">☆</span>
+                <span data-value="2">☆</span>
+                <span data-value="3">☆</span>
+                <span data-value="4">☆</span>
+                <span data-value="5">☆</span>
+              </div>
+            </div>
+            <textarea id="reviewText" placeholder="Расскажите о вашем опыте использования товара..."></textarea>
+            <button class="btn btn-primary" id="submitReviewBtn">Отправить</button>
+          </div>
+
+          <div id="reviewsList" class="reviews-list">
+            <!-- Reviews will be loaded here -->
+            <p class="text-muted">Отзывов пока нет. Будьте первым!</p>
+          </div>
+        </section>
+      </section>
+    </div>
+  </main>
+
+  <div id="lightbox" class="modal hidden" aria-hidden="true">
+    <div class="modal-backdrop" data-close="true"></div>
+    <div class="modal-dialog lightbox-dialog" role="dialog" aria-modal="true" aria-label="Просмотр фото">
+      <div class="modal-header">
+        <div class="modal-title">Фотографии</div>
+        <button class="icon-btn" type="button" data-close="true" aria-label="Закрыть">✕</button>
+      </div>
+      <div class="modal-body lightbox-body">
+        <button class="icon-btn lightbox-nav" id="lightboxPrev" type="button" aria-label="Предыдущее фото">‹</button>
+        <img id="lightboxImg" class="lightbox-img" alt="Фото товара" />
+        <button class="icon-btn lightbox-nav" id="lightboxNext" type="button" aria-label="Следующее фото">›</button>
+      </div>
+      <div class="lightbox-footer">
+        <span class="pill pill-muted" id="lightboxCounter">1 / 1</span>
+      </div>
+    </div>
+  </div>
+
+  <footer class="site-footer">
+    <div class="container footer-inner">
+      <p>&copy; <span id="year"></span> СТАРТ</p>
+      <a href="admin.html" class="footer-admin-link hidden">Админ-панель</a>
+    </div>
+  </footer>
+
+  <script src="js/api.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/cart.js"></script>
+  <script src="js/wishlist.js"></script>
+  <script src="js/script.js"></script>
+  <script src="js/productPage.js"></script>
+</body>
+</html>
+

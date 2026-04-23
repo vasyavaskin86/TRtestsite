@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <title>Спортивный магазин</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="СТАРТ — спортивные товары, услуги веломастерской, актуальные акции и новости." />
+  <meta property="og:title" content="СТАРТ — спортивные товары" />
+  <meta property="og:description" content="Каталог спортивных товаров и услуги веломастерской." />
+  <meta property="og:type" content="website" />
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+  <header class="site-header">
+    <div class="container header-inner">
+      <div class="logo" onclick="window.location.href='index.html'">
+        <img width="65%" height="20%" src="img\logo (2).png" alt="logo">
+      </div>
+      <nav class="main-nav">
+        <a href="#catalog">Каталог</a>
+        <a href="services.html">Услуги</a>
+        <a href="#about">О нас</a>
+        <a href="#contacts">Контакты</a>
+      </nav>
+      <div class="header-actions">
+        <a class="pill hidden" id="wishlistLink" href="#wishlist" aria-label="Избранное">
+          ❤ <span class="badge" id="wishlistCount">0</span>
+        </a>
+        <a class="pill" href="cart.html" aria-label="Корзина">
+          Корзина <span class="badge" id="cartCount">0</span>
+        </a>
+        <a class="pill hidden" id="myOrdersLink" href="my-orders.html">Мои заказы</a>
+        <button class="pill pill-muted" id="authButton" type="button">Войти</button>
+        <button class="pill pill-muted hidden" id="logoutButton" type="button">Выйти</button>
+        <a class="admin-link hidden" href="admin.html">Админ-панель</a>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="container hero-inner">
+        <div class="hero-text">
+          <h1>Спортивные товары для активной жизни</h1>
+          <p>Велосипеды, самокаты, ролики и комплектующие для любого уровня подготовки.</p>
+          <a href="#catalog" class="btn btn-primary">Перейти в каталог</a>
+        </div>
+        <div class="hero-visual">
+          <div class="hero-card hero-card-main">
+            <h2>Новинки сезона</h2>
+            <p>Обновлённая линейка городских велосипедов и самокатов.</p>
+          </div>
+          <div class="hero-card hero-card-secondary">
+            <p>Бесплатная настройка и обслуживание в течение 30 дней.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="carousel" aria-label="Новинки, акции и новости">
+      <div class="container">
+        <div class="carousel-shell">
+          <header class="carousel-header">
+            <div>
+              <h2 class="carousel-title">Что нового в СТАРТ</h2>
+              <p class="carousel-subtitle">Новинки, акции и новости — в одном месте.</p>
+            </div>
+            <div class="carousel-controls">
+              <button class="icon-btn" type="button" id="carouselPrev" aria-label="Предыдущий слайд">‹</button>
+              <button class="icon-btn" type="button" id="carouselNext" aria-label="Следующий слайд">›</button>
+            </div>
+          </header>
+
+          <div class="carousel-viewport" id="carouselViewport">
+            <div class="carousel-track" id="carouselTrack">
+              <!-- Слайды карусели рендерятся из JS (админка) -->
+            </div>
+          </div>
+
+          <div class="carousel-dots" id="carouselDots" aria-label="Переключение слайдов"></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="promotions" class="catalog">
+      <div class="container">
+        <header class="section-header">
+          <h2>Акции</h2>
+          <p>Актуальные спецпредложения и скидки.</p>
+        </header>
+        <div id="promotionsGrid" class="products-grid"></div>
+        <div id="promotionsEmpty" class="empty-state hidden">
+          <p>Пока нет активных акций. Добавьте их через админ-панель.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="news" class="about">
+      <div class="container">
+        <header class="section-header">
+          <h2>Новости</h2>
+          <p>Свежие обновления магазина, сервиса и ассортимента.</p>
+        </header>
+        <div id="newsList" class="about-highlights"></div>
+        <div id="newsEmpty" class="empty-state hidden">
+          <p>Пока нет новостей. Добавьте их через админ-панель.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="catalog" class="catalog">
+      <div class="container">
+        <header class="section-header">
+          <h2>Каталог товаров</h2>
+          <p>Выберите категорию или просматривайте все товары сразу.</p>
+        </header>
+
+        <div class="catalog-controls">
+          <div class="filters">
+            <button class="filter-btn active" data-category="all">Все</button>
+            <button class="filter-btn" data-category="wishlist">Избранное</button>
+            <button class="filter-btn" data-category="bicycles">Велосипеды</button>
+            <button class="filter-btn" data-category="scooters">Самокаты</button>
+            <button class="filter-btn" data-category="rollers">Ролики</button>
+            <button class="filter-btn" data-category="parts">Запчасти</button>
+            <button class="filter-btn" data-category="accessories">Аксессуары</button>
+          </div>
+          <div class="search-wrap">
+            <input type="search" id="searchInput" class="search-input" placeholder="Поиск по названию или описанию..." />
+          </div>
+        </div>
+
+        <div id="bikeFilters" class="bike-filters hidden">
+          <div class="bike-filters-grid">
+            <label>
+              Производитель
+              <select id="filterManufacturer">
+                <option value="">Любой</option>
+              </select>
+            </label>
+            <label>
+              Диаметр колеса
+              <select id="filterWheel">
+                <option value="">Любой</option>
+              </select>
+            </label>
+            <label>
+              Размер рамы
+              <select id="filterFrame">
+                <option value="">Любой</option>
+              </select>
+            </label>
+            <label>
+              Цвет
+              <select id="filterColor">
+                <option value="">Любой</option>
+              </select>
+            </label>
+            <label>
+              Тормоза
+              <select id="filterBrake">
+                <option value="">Любые</option>
+              </select>
+            </label>
+            <label>
+              Подвеска
+              <select id="filterSuspension">
+                <option value="">Любая</option>
+              </select>
+            </label>
+          </div>
+          <div class="bike-filters-actions">
+            <button class="btn btn-secondary" type="button" id="resetBikeFilters">Сбросить фильтры</button>
+          </div>
+        </div>
+        <div id="extraCategoryFilters" class="bike-filters hidden">
+          <div class="bike-filters-grid">
+            <label>
+              Бренд
+              <select id="filterBrand"><option value="">Любой</option></select>
+            </label>
+            <label>
+              Материал
+              <select id="filterMaterial"><option value="">Любой</option></select>
+            </label>
+            <label>
+              Назначение
+              <select id="filterPurpose"><option value="">Любое</option></select>
+            </label>
+            <label>
+              Подкатегория
+              <select id="filterSubcategory"><option value="">Любая</option></select>
+            </label>
+          </div>
+          <div class="bike-filters-actions">
+            <button class="btn btn-secondary" type="button" id="resetExtraFilters">Сбросить фильтры</button>
+          </div>
+        </div>
+
+        <div id="productsGrid" class="products-grid">
+          <!-- Карточки товаров рендерятся из JS -->
+        </div>
+
+        <div id="emptyState" class="empty-state hidden">
+          <p>Товары не найдены. Попробуйте изменить фильтры или добавить товары через админ-панель.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="about" class="about">
+      <div class="container about-inner">
+        <div>
+          <h2>О магазине</h2>
+          <p>
+            Мы специализируемся на продаже спортивных товаров для активного отдыха:
+            городские и горные велосипеды, самокаты, роликовые коньки, а также
+            широкий выбор запчастей и аксессуаров.
+          </p>
+          <p>
+            Все товары проходят предпродажную подготовку, а наши специалисты помогут
+            подобрать оптимальную комплектацию под ваши задачи.
+          </p>
+        </div>
+        <ul class="about-highlights">
+          <li>Проверенные бренды и сертифицированные товары</li>
+          <li>Гарантийное и постгарантийное обслуживание</li>
+          <li>Помощь в настройке и подборе оборудования</li>
+        </ul>
+      </div>
+    </section>
+
+    <section id="contacts" class="contacts">
+      <div class="container contacts-inner">
+        <div>
+          <h2>Контакты</h2>
+          <p><strong>Адрес:</strong> г. Примерск, ул. Спортивная, д. 10</p>
+          <p><strong>Телефон:</strong> +7 (900) 000-00-00</p>
+          <p><strong>E-mail:</strong> info@start.ru</p>
+        </div>
+        <form class="contact-form" onsubmit="event.preventDefault(); alert('Спасибо за обращение!');">
+          <h3>Напишите нам</h3>
+          <label>
+            Имя
+            <input type="text" required />
+          </label>
+          <label>
+            E-mail
+            <input type="email" required />
+          </label>
+          <label>
+            Сообщение
+            <textarea rows="4" required></textarea>
+          </label>
+          <button type="submit" class="btn btn-primary">Отправить</button>
+        </form>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container footer-inner">
+      <p>&copy; <span id="year"></span> СТАРТ. Все права защищены.</p>
+      <a href="admin.html" class="footer-admin-link hidden">Вход для администратора</a>
+    </div>
+  </footer>
+
+  <script src="js/api.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/cart.js"></script>
+  <script src="js/wishlist.js"></script>
+  <script src="js/script.js"></script>
+</body>
+</html>
+
