@@ -9,7 +9,7 @@ const API_BASE = (() => {
   
   // Для продакшена (GitHub + облачный бэкенд)
   // ВАЖНО: После деплоя бэкенда на Render/Railway, замените адрес ниже на ваш URL
-  return ""; 
+  return "https://trtestsite.onrender.com/"; 
 })();
 console.log("API_BASE initialized as:", API_BASE);
 const TOKEN_KEY = "start_auth_token";
