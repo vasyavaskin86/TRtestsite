@@ -9,9 +9,9 @@ const API_BASE = (() => {
   
   // Для продакшена (GitHub + облачный бэкенд)
   // ВАЖНО: После деплоя бэкенда на Render/Railway, замените адрес ниже на ваш URL
-  return "https://trtestsite.onrender.com/"; 
+  return "https://trtestsite.onrender.com"; 
 })();
-console.log("API_BASE initialized as:", API_BASE);
+
 const TOKEN_KEY = "start_auth_token";
 
 function getAuthToken() {
@@ -29,7 +29,10 @@ async function apiRequest(path, options = {}) {
   if (token) headers.Authorization = `Bearer ${token}`;
   let res;
   try {
-    res = await fetch(`${API_BASE}${path}`, { ...options, headers });
+    // Убеждаемся, что путь начинается со слеша, а база его не имеет
+    const cleanPath = path.startsWith("/") ? path : `/${path}`;
+    const url = `${API_BASE}${cleanPath}`;
+    res = await fetch(url, { ...options, headers });
   } catch {
     const isFileProtocol = window.location.protocol === "file:";
     if (isFileProtocol) {
