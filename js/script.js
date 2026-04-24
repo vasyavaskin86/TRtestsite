@@ -161,14 +161,19 @@ function userLabel() {
 function setHeaderAuthUI() {
   const authButton = document.getElementById("authButton");
   const logoutButton = document.getElementById("logoutButton");
+  const profileLink = document.getElementById("profileLink");
   const user = typeof currentUser === "function" ? currentUser() : null;
 
   if (authButton) {
-    authButton.textContent = user ? userLabel() : "Войти";
-    authButton.classList.toggle("pill-muted", !user);
+    authButton.classList.toggle("hidden", !!user);
   }
-  if (logoutButton) logoutButton.classList.toggle("hidden", !user);
-  document.getElementById("myOrdersLink")?.classList.toggle("hidden", !user);
+  if (logoutButton) {
+    logoutButton.classList.toggle("hidden", !user);
+  }
+  if (profileLink) {
+    profileLink.classList.toggle("hidden", !user);
+  }
+  
   document.querySelectorAll(".admin-link, .footer-admin-link").forEach((el) => {
     el.classList.toggle("hidden", !user?.isAdmin);
   });

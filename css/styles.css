@@ -202,14 +202,14 @@ button, a [role="button"], .btn {
 .main-nav {
   position: fixed;
   top: 0;
-  right: -100%;
+  left: -100%;
   width: 320px;
   height: 100vh;
   background: white;
   flex-direction: column;
   padding: 100px 40px 40px;
-  box-shadow: -10px 0 30px rgba(0, 0, 0, 0.1);
-  transition: right 0.3s ease;
+  box-shadow: 10px 0 30px rgba(0, 0, 0, 0.1);
+  transition: left 0.3s ease;
   z-index: 100;
   display: flex;
   gap: 20px;
@@ -230,7 +230,8 @@ button, a [role="button"], .btn {
 }
 
 .main-nav.active {
-  right: 0;
+  left: 0;
+  right: auto;
 }
 
 .burger-menu.active span:nth-child(1) {

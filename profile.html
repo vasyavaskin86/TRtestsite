@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <title>Профиль пользователя — СТАРТ</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="css/styles.css" />
+  <style>
+    .profile-layout {
+      display: grid;
+      grid-template-columns: 1fr 300px;
+      gap: 40px;
+      margin-top: 40px;
+    }
+    .profile-info {
+      background: white;
+      padding: 30px;
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border-subtle);
+      box-shadow: var(--shadow-subtle);
+    }
+    .profile-field {
+      margin-bottom: 20px;
+    }
+    .profile-field label {
+      display: block;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+    }
+    .profile-field div {
+      font-size: 1.1rem;
+      font-weight: 500;
+    }
+    .profile-menu {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .profile-menu .btn {
+      text-align: left;
+      justify-content: flex-start;
+      width: 100%;
+    }
+    @media (max-width: 960px) {
+      .profile-layout {
+        grid-template-columns: 1fr;
+      }
+      .profile-menu {
+        order: -1;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header class="site-header">
+    <div class="container header-inner">
+      <button class="burger-menu" id="burgerMenu" aria-label="Меню">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+      <div class="logo" onclick="window.location.href='index.html'">
+        <img width="65%" height="20%" src="img/logo.png" alt="logo">
+      </div>
+      <nav class="main-nav" id="mainNav">
+        <a href="index.html#catalog">Каталог</a>
+        <a href="services.html">Услуги</a>
+        <a href="index.html#about">О нас</a>
+        <a href="index.html#contacts">Контакты</a>
+      </nav>
+      <div class="header-actions">
+        <a class="pill" id="wishlistLink" href="wishlist.html" aria-label="Избранное">
+          ❤ <span class="badge" id="wishlistCount">0</span>
+        </a>
+        <a class="pill" href="cart.html" aria-label="Корзина">
+          Корзина <span class="badge" id="cartCount">0</span>
+        </a>
+        <button class="pill pill-muted hidden" id="logoutButton" type="button">Выйти</button>
+        <a class="admin-link hidden" href="admin.html">Админ-панель</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    <div class="profile-layout" id="profileContent">
+      <div class="profile-info">
+        <h2>Личные данные</h2>
+        <div class="profile-field">
+          <label>Имя</label>
+          <div id="userName">-</div>
+        </div>
+        <div class="profile-field">
+          <label>Фамилия</label>
+          <div id="userLastName">-</div>
+        </div>
+        <div class="profile-field">
+          <label>Электронная почта</label>
+          <div id="userEmail">-</div>
+        </div>
+        <div class="profile-field">
+          <label>Номер телефона</label>
+          <div id="userPhone">-</div>
+        </div>
+      </div>
+
+      <aside class="profile-menu">
+        <h3>Меню</h3>
+        <a href="my-orders.html" class="btn btn-secondary">📦 История заказов</a>
+        <a href="wishlist.html" class="btn btn-secondary">❤ Избранное</a>
+        <a href="cart.html" class="btn btn-secondary">🛒 Корзина</a>
+        <button class="btn btn-secondary" onclick="logoutUser(); window.location.href='index.html'">🚪 Выйти</button>
+      </aside>
+    </div>
+  </main>
+
+  <script src="js/api.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/cart.js"></script>
+  <script src="js/wishlist.js"></script>
+  <script src="js/script.js"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", async () => {
+      const user = await restoreSession();
+      if (!user) {
+        window.location.href = 'index.html';
+        return;
+      }
+
+      document.getElementById("userName").textContent = user.name || "-";
+      document.getElementById("userEmail").textContent = user.email || "-";
+      
+      // Phone and LastName might not be in the user object yet
+      // but we show what we have or placeholder
+      document.getElementById("userLastName").textContent = user.lastName || "Не указано";
+      document.getElementById("userPhone").textContent = user.phone || "Не указано";
+    });
+  </script>
+</body>
+</html>
