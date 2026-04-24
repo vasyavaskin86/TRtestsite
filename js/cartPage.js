@@ -33,7 +33,7 @@ function updateAuthUI() {
   if (logoutButton) logoutButton.classList.toggle("hidden", !user);
 }
 
-function renderCart() {
+async function renderCart() {
   const empty = document.getElementById("cartEmpty");
   const layout = document.getElementById("cartLayout");
   const itemsEl = document.getElementById("cartItems");
@@ -47,6 +47,18 @@ function renderCart() {
     empty.classList.remove("hidden");
     layout.classList.add("hidden");
     return;
+  }
+
+  // Pre-fill user data
+  const user = typeof currentUser === "function" ? currentUser() : null;
+  if (user) {
+    const nameInput = document.getElementById("orderCustomerName");
+    const phoneInput = document.getElementById("orderCustomerPhone");
+    const emailInput = document.getElementById("orderCustomerEmail");
+
+    if (nameInput && !nameInput.value) nameInput.value = user.name || "";
+    if (phoneInput && !phoneInput.value) phoneInput.value = user.phone || "";
+    if (emailInput && !emailInput.value) emailInput.value = user.email || "";
   }
 
   empty.classList.add("hidden");

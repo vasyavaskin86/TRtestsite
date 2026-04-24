@@ -80,6 +80,7 @@ const api = {
   login: async (payload) => apiRequest("/api/auth/login", { method: "POST", body: JSON.stringify(payload) }),
   register: async (payload) => apiRequest("/api/auth/register", { method: "POST", body: JSON.stringify(payload) }),
   me: async () => apiRequest("/api/auth/me"),
+  updateProfile: async (payload) => apiRequest("/api/auth/profile", { method: "PUT", body: JSON.stringify(payload) }),
   getAdminState: async () => apiRequest("/api/admin/state"),
   saveAdminState: async (payload) => apiRequest("/api/admin/state", { method: "PUT", body: JSON.stringify(payload) }),
   getPublicSettings: async () => apiRequest("/api/settings/public"),

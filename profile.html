@@ -85,22 +85,47 @@
   <main class="container">
     <div class="profile-layout" id="profileContent">
       <div class="profile-info">
-        <h2>Личные данные</h2>
-        <div class="profile-field">
-          <label>Имя</label>
-          <div id="userName">-</div>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+          <h2 style="margin: 0;">Личные данные</h2>
+          <button class="btn btn-secondary" id="editProfileBtn">✎ Редактировать</button>
         </div>
-        <div class="profile-field">
-          <label>Фамилия</label>
-          <div id="userLastName">-</div>
-        </div>
-        <div class="profile-field">
-          <label>Электронная почта</label>
-          <div id="userEmail">-</div>
-        </div>
-        <div class="profile-field">
-          <label>Номер телефона</label>
-          <div id="userPhone">-</div>
+        
+        <form id="profileForm" class="hidden">
+          <div class="profile-field">
+            <label>Имя</label>
+            <input type="text" id="editName" class="qty-input" style="width: 100%;" required>
+          </div>
+          <div class="profile-field">
+            <label>Фамилия</label>
+            <input type="text" id="editLastName" class="qty-input" style="width: 100%;">
+          </div>
+          <div class="profile-field">
+            <label>Номер телефона</label>
+            <input type="tel" id="editPhone" class="qty-input" style="width: 100%;">
+          </div>
+          <div style="display: flex; gap: 10px; margin-top: 20px;">
+            <button type="submit" class="btn btn-primary">Сохранить</button>
+            <button type="button" class="btn btn-secondary" id="cancelEditBtn">Отмена</button>
+          </div>
+        </form>
+
+        <div id="profileDisplay">
+          <div class="profile-field">
+            <label>Имя</label>
+            <div id="userName">-</div>
+          </div>
+          <div class="profile-field">
+            <label>Фамилия</label>
+            <div id="userLastName">-</div>
+          </div>
+          <div class="profile-field">
+            <label>Электронная почта</label>
+            <div id="userEmail">-</div>
+          </div>
+          <div class="profile-field">
+            <label>Номер телефона</label>
+            <div id="userPhone">-</div>
+          </div>
         </div>
       </div>
 
@@ -121,19 +146,62 @@
   <script src="js/script.js"></script>
   <script>
     document.addEventListener("DOMContentLoaded", async () => {
-      const user = await restoreSession();
-      if (!user) {
-        window.location.href = 'index.html';
-        return;
+      let currentCachedUser = null;
+
+      async function updateUI() {
+        const user = await restoreSession();
+        if (!user) {
+          window.location.href = 'index.html';
+          return;
+        }
+        currentCachedUser = user;
+
+        document.getElementById("userName").textContent = user.name || "-";
+        document.getElementById("userEmail").textContent = user.email || "-";
+        document.getElementById("userLastName").textContent = user.lastName || "Не указано";
+        document.getElementById("userPhone").textContent = user.phone || "Не указано";
       }
 
-      document.getElementById("userName").textContent = user.name || "-";
-      document.getElementById("userEmail").textContent = user.email || "-";
-      
-      // Phone and LastName might not be in the user object yet
-      // but we show what we have or placeholder
-      document.getElementById("userLastName").textContent = user.lastName || "Не указано";
-      document.getElementById("userPhone").textContent = user.phone || "Не указано";
+      await updateUI();
+
+      const editBtn = document.getElementById("editProfileBtn");
+      const cancelBtn = document.getElementById("cancelEditBtn");
+      const profileForm = document.getElementById("profileForm");
+      const profileDisplay = document.getElementById("profileDisplay");
+
+      editBtn.addEventListener("click", () => {
+        document.getElementById("editName").value = currentCachedUser.name || "";
+        document.getElementById("editLastName").value = currentCachedUser.lastName || "";
+        document.getElementById("editPhone").value = currentCachedUser.phone || "";
+        
+        profileForm.classList.remove("hidden");
+        profileDisplay.classList.add("hidden");
+        editBtn.classList.add("hidden");
+      });
+
+      cancelBtn.addEventListener("click", () => {
+        profileForm.classList.add("hidden");
+        profileDisplay.classList.remove("hidden");
+        editBtn.classList.remove("hidden");
+      });
+
+      profileForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const payload = {
+          name: document.getElementById("editName").value,
+          lastName: document.getElementById("editLastName").value,
+          phone: document.getElementById("editPhone").value
+        };
+
+        try {
+          await api.updateProfile(payload);
+          await updateUI();
+          cancelBtn.click();
+          showToast("Успех", "Данные профиля обновлены");
+        } catch (err) {
+          alert("Ошибка при обновлении профиля: " + err.message);
+        }
+      });
     });
   </script>
 </body>

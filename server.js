@@ -93,6 +93,8 @@ async function initDb() {
       CREATE TABLE IF NOT EXISTS users (
         id VARCHAR(255) PRIMARY KEY,
         name VARCHAR(255) NOT NULL,
+        lastName VARCHAR(255),
+        phone VARCHAR(255),
         email VARCHAR(255) NOT NULL UNIQUE,
         passwordHash VARCHAR(255) NOT NULL,
         isAdmin BOOLEAN DEFAULT FALSE,
@@ -210,6 +212,9 @@ async function initDb() {
     };
 
     // Migration for orders table
+    await addColumn("users", "lastName", "VARCHAR(255)");
+    await addColumn("users", "phone", "VARCHAR(255)");
+    
     await addColumn("orders", "customerName", "VARCHAR(255)");
     await addColumn("orders", "customerEmail", "VARCHAR(255)");
     await addColumn("orders", "customerPhone", "VARCHAR(255)");
@@ -311,6 +316,8 @@ function safeUser(user) {
     id: user.id,
     name: user.name,
     email: user.email,
+    lastName: user.lastName || "",
+    phone: user.phone || "",
     isAdmin: Boolean(user.isAdmin),
   };
 }
@@ -438,6 +445,27 @@ app.get("/api/auth/me", authRequired, asyncHandler(async (req, res) => {
   const user = users[0];
   if (!user) return res.status(401).json({ message: "Пользователь не найден." });
   res.json({ user: safeUser(user) });
+}));
+
+app.put("/api/auth/profile", authRequired, asyncHandler(async (req, res) => {
+  const { name, lastName, phone } = req.body || {};
+  
+  if (useJsonFallback && jsonData) {
+    const user = (jsonData.users || []).find(u => u.id === req.userId);
+    if (!user) return res.status(401).json({ message: "Пользователь не найден." });
+    if (name) user.name = name;
+    if (lastName !== undefined) user.lastName = lastName;
+    if (phone !== undefined) user.phone = phone;
+    return res.json({ user: safeUser(user) });
+  }
+
+  await pool.query(
+    "UPDATE users SET name = ?, lastName = ?, phone = ? WHERE id = ?",
+    [name, lastName || null, phone || null, req.userId]
+  );
+  
+  const [users] = await pool.query("SELECT * FROM users WHERE id = ?", [req.userId]);
+  res.json({ user: safeUser(users[0]) });
 }));
 
 app.get("/api/products", asyncHandler(async (_req, res) => {
@@ -618,6 +646,22 @@ app.post("/api/orders", authRequired, asyncHandler(async (req, res) => {
 
   const total = enriched.reduce((sum, i) => sum + i.qty * i.price, 0);
   const orderId = crypto.randomUUID();
+
+  // Update user profile if phone/name was missing
+  if (req.userId) {
+    if (useJsonFallback && jsonData) {
+      const u = (jsonData.users || []).find(x => x.id === req.userId);
+      if (u) {
+        if (!u.phone && normalizedPhone) u.phone = normalizedPhone;
+        if (!u.name && name) u.name = name;
+      }
+    } else {
+      await pool.query(
+        "UPDATE users SET name = IF(name IS NULL OR name = '', ?, name), phone = IF(phone IS NULL OR phone = '', ?, phone) WHERE id = ?",
+        [name, normalizedPhone, req.userId]
+      );
+    }
+  }
 
   if (useJsonFallback && jsonData) {
     const newOrder = {
