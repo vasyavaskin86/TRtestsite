@@ -21,26 +21,23 @@ function getPoolConfig() {
   };
 
   if (process.env.DATABASE_URL) {
-    // mysql2 supports connection string, but SSL is tricky in the string.
-    // It's safer to use the string but ensure SSL is attached if it's a cloud DB.
+    // Primary method for Render/Cloud
     let url = process.env.DATABASE_URL;
     if (!url.includes('ssl=')) {
       url += (url.includes('?') ? '&' : '?') + 'ssl={"rejectUnauthorized":false}';
     }
     return url;
   } else {
-    config.host = process.env.DB_HOST || "127.0.0.1"; // Use 127.0.0.1 instead of localhost for Node 17+
+    // Local development (MAMP/XAMPP)
+    config.host = process.env.DB_HOST || "127.0.0.1";
     config.user = process.env.DB_USER || "root";
     config.password = process.env.DB_PASS || "root";
     config.port = parseInt(process.env.DB_PORT || "3306");
     config.database = dbName;
     
-    // On Render, if we don't have a DB_HOST or DATABASE_URL, we are likely to fail
-    if (!process.env.DB_HOST && !process.env.DATABASE_URL && process.env.RENDER) {
-      console.warn("WARNING: Running on Render but no DATABASE_URL or DB_HOST provided. Connection will likely fail.");
-    }
-    
-    if (process.env.DB_SSL !== "true" && process.env.NODE_ENV !== "production") {
+    // In production, SSL is usually mandatory. If we are here without DATABASE_URL, 
+    // we only disable SSL if specifically asked.
+    if (process.env.DB_SSL === "false" || (!process.env.DB_SSL && process.env.NODE_ENV !== "production")) {
       delete config.ssl;
     }
   }
@@ -256,9 +253,13 @@ async function initDb() {
       const path = require("path");
       const dbPath = path.join(__dirname, "data", "db.json");
       if (fs.existsSync(dbPath)) {
-        jsonData = JSON.parse(fs.readFileSync(dbPath, "utf8"));
+        jsonData = JSON.parse(fs.readFileSync(dbPath, "utf8")) || {};
         useJsonFallback = true;
         console.log("CRITICAL: Using JSON fallback because MySQL connection failed.");
+      } else {
+        jsonData = {};
+        useJsonFallback = true;
+        console.log("CRITICAL: No db.json found, using empty object fallback.");
       }
     } catch (jsonErr) {
       console.error("Failed to load JSON fallback:", jsonErr);
@@ -314,31 +315,36 @@ function safeUser(user) {
   };
 }
 
-const authRequired = asyncHandler(async (req, res, next) => {
+const authRequired = async (req, res, next) => {
   const token = req.headers.authorization?.replace("Bearer ", "").trim();
   if (!token) return res.status(401).json({ message: "Требуется авторизация." });
   try {
     const payload = jwt.verify(token, JWT_SECRET);
     req.userId = payload.userId;
     next();
-  } catch {
+  } catch (err) {
+    console.error("Auth Token Error:", err.message);
     return res.status(401).json({ message: "Сессия истекла. Войдите снова." });
   }
-});
+};
 
-const adminRequired = asyncHandler(async (req, res, next) => {
-  if (useJsonFallback && jsonData) {
-    const user = (jsonData.users || []).find(u => u.id === req.userId);
+const adminRequired = async (req, res, next) => {
+  try {
+    if (useJsonFallback && jsonData) {
+      const user = (jsonData.users || []).find(u => u.id === req.userId);
+      if (!user || !user.isAdmin) return res.status(403).json({ message: "Недостаточно прав." });
+      req.currentUser = user;
+      return next();
+    }
+    const [users] = await pool.query("SELECT * FROM users WHERE id = ?", [req.userId]);
+    const user = users[0];
     if (!user || !user.isAdmin) return res.status(403).json({ message: "Недостаточно прав." });
     req.currentUser = user;
-    return next();
+    next();
+  } catch (err) {
+    next(err);
   }
-  const [users] = await pool.query("SELECT * FROM users WHERE id = ?", [req.userId]);
-  const user = users[0];
-  if (!user || !user.isAdmin) return res.status(403).json({ message: "Недостаточно прав." });
-  req.currentUser = user;
-  next();
-});
+};
 
 app.get("/api/health", asyncHandler(async (_req, res) => {
   try {
@@ -612,6 +618,27 @@ app.post("/api/orders", authRequired, asyncHandler(async (req, res) => {
 
   const total = enriched.reduce((sum, i) => sum + i.qty * i.price, 0);
   const orderId = crypto.randomUUID();
+
+  if (useJsonFallback && jsonData) {
+    const newOrder = {
+      id: orderId,
+      userId: user.id,
+      customerName: name,
+      customerEmail: email,
+      customerPhone: normalizedPhone,
+      total,
+      items: enriched,
+      status: 'new',
+      paymentMethod: paymentMethod === "online" ? "online" : "cash",
+      deliveryAddress: String(deliveryAddress || ""),
+      deliveryComment: String(deliveryComment || ""),
+      createdAt: Date.now()
+    };
+    if (!jsonData.orders) jsonData.orders = [];
+    jsonData.orders.push(newOrder);
+    return res.status(201).json({ id: orderId, total, items: enriched });
+  }
+
   await pool.query(
     "INSERT INTO orders (id, userId, customerName, customerEmail, customerPhone, total, items, status, paymentMethod, deliveryAddress, deliveryComment) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
     [orderId, user.id, name, email, normalizedPhone, total, JSON.stringify(enriched), 'new', paymentMethod === "online" ? "online" : "cash", String(deliveryAddress || ""), String(deliveryComment || "")]
@@ -621,6 +648,10 @@ app.post("/api/orders", authRequired, asyncHandler(async (req, res) => {
 }));
 
 app.get("/api/orders/my", authRequired, asyncHandler(async (req, res) => {
+  if (useJsonFallback && jsonData) {
+    const rows = (jsonData.orders || []).filter(o => o.userId === req.userId);
+    return res.json(rows.map(o => ({ ...o, items: Array.isArray(o.items) ? o.items : [] })));
+  }
   const [rows] = await pool.query("SELECT * FROM orders WHERE userId = ? ORDER BY createdAt DESC", [req.userId]);
   res.json(rows.map(o => {
     let items = [];
@@ -632,6 +663,10 @@ app.get("/api/orders/my", authRequired, asyncHandler(async (req, res) => {
 }));
 
 app.get("/api/orders", authRequired, adminRequired, asyncHandler(async (_req, res) => {
+  if (useJsonFallback && jsonData) {
+    const rows = (jsonData.orders || []).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+    return res.json(rows.map(o => ({ ...o, items: Array.isArray(o.items) ? o.items : [] })));
+  }
   const [rows] = await pool.query("SELECT * FROM orders ORDER BY createdAt DESC");
   res.json(rows.map(o => {
     let items = [];
@@ -648,6 +683,14 @@ app.patch("/api/orders/:id/status", authRequired, adminRequired, asyncHandler(as
   if (!allowed.includes(status)) {
     return res.status(400).json({ message: "Некорректный статус заказа." });
   }
+
+  if (useJsonFallback && jsonData) {
+    const order = (jsonData.orders || []).find(o => o.id === req.params.id);
+    if (!order) return res.status(404).json({ message: "Заказ не найден." });
+    order.status = status;
+    return res.json({ ...order, items: Array.isArray(order.items) ? order.items : [] });
+  }
+
   await pool.query("UPDATE orders SET status = ? WHERE id = ?", [status, req.params.id]);
   const [rows] = await pool.query("SELECT * FROM orders WHERE id = ?", [req.params.id]);
   if (rows.length === 0) return res.status(404).json({ message: "Заказ не найден." });
