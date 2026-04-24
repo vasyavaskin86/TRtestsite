@@ -9,16 +9,25 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 const JWT_SECRET = process.env.JWT_SECRET || "start-super-secret-change-me";
 
-// MySQL connection pool (without database initially to create it)
-const poolConfig = {
-  host: process.env.DB_HOST || "localhost",
-  user: process.env.DB_USER || "root",
-  password: process.env.DB_PASS || "root",
-  port: process.env.DB_PORT || 3306,
-  waitForConnections: true,
-  connectionLimit: 10,
-  queueLimit: 0,
-};
+// MySQL connection pool
+let poolConfig;
+const dbName = process.env.DB_NAME || "sportzone";
+
+if (process.env.DATABASE_URL) {
+  poolConfig = process.env.DATABASE_URL + (process.env.DATABASE_URL.includes('?') ? '&' : '?') + "ssl={\"rejectUnauthorized\":false}";
+} else {
+  poolConfig = {
+    host: process.env.DB_HOST || "localhost",
+    user: process.env.DB_USER || "root",
+    password: process.env.DB_PASS || "root",
+    port: process.env.DB_PORT || 3306,
+    database: dbName,
+    waitForConnections: true,
+    connectionLimit: 10,
+    queueLimit: 0,
+    ssl: process.env.DB_SSL === "true" ? { rejectUnauthorized: false } : undefined,
+  };
+}
 
 let pool = mysql.createPool(poolConfig);
 
@@ -26,18 +35,27 @@ let pool = mysql.createPool(poolConfig);
 async function initDb() {
   let connection;
   try {
-    connection = await pool.getConnection();
-    const dbName = process.env.DB_NAME || "sportzone";
-    await connection.query(`CREATE DATABASE IF NOT EXISTS \`${dbName}\``);
+    // Try to get a connection to verify database existence
+    try {
+      connection = await pool.getConnection();
+      console.log(`Connected to database ${dbName} successfully.`);
+    } catch (e) {
+      console.log(`Initial connection failed: ${e.message}. Trying to create database if it doesn't exist...`);
+      
+      // If failed, try to connect without database name to create it
+      const noDbConfig = typeof poolConfig === 'string' 
+        ? poolConfig.replace(/\/[^/?]+\?/, '/?') // This is a bit hacky for URL
+        : { ...poolConfig, database: undefined };
+      
+      const tempConn = await mysql.createConnection(noDbConfig);
+      await tempConn.query(`CREATE DATABASE IF NOT EXISTS \`${dbName}\``);
+      await tempConn.end();
+      
+      connection = await pool.getConnection();
+      console.log(`Database ${dbName} created and connected.`);
+    }
+
     await connection.query(`USE \`${dbName}\``);
-    
-    // Re-create pool with database name specified
-    await pool.end();
-    pool = mysql.createPool({ ...poolConfig, database: dbName });
-    
-    // Get new connection from new pool
-    connection.release();
-    connection = await pool.getConnection();
 
     await connection.query(`
       CREATE TABLE IF NOT EXISTS users (
@@ -133,6 +151,19 @@ async function initDb() {
       )
     `);
 
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS settings (
+        id INT PRIMARY KEY AUTO_INCREMENT,
+        enableOnlinePayment BOOLEAN DEFAULT FALSE,
+        enableDeliveryForm BOOLEAN DEFAULT FALSE,
+        enableNotifications BOOLEAN DEFAULT FALSE,
+        notificationProvider VARCHAR(255) DEFAULT 'vk',
+        notificationWebhookUrl TEXT,
+        enableWarehouseStocks BOOLEAN DEFAULT TRUE,
+        enable1CIntegration BOOLEAN DEFAULT FALSE
+      )
+    `);
+
     // Migration helper
     const addColumn = async (table, column, definition) => {
       try {
@@ -161,19 +192,6 @@ async function initDb() {
     await addColumn("settings", "enableWarehouseStocks", "BOOLEAN DEFAULT TRUE");
     await addColumn("settings", "enable1CIntegration", "BOOLEAN DEFAULT FALSE");
 
-    await connection.query(`
-      CREATE TABLE IF NOT EXISTS settings (
-        id INT PRIMARY KEY AUTO_INCREMENT,
-        enableOnlinePayment BOOLEAN DEFAULT FALSE,
-        enableDeliveryForm BOOLEAN DEFAULT FALSE,
-        enableNotifications BOOLEAN DEFAULT FALSE,
-        notificationProvider VARCHAR(255) DEFAULT 'vk',
-        notificationWebhookUrl TEXT,
-        enableWarehouseStocks BOOLEAN DEFAULT TRUE,
-        enable1CIntegration BOOLEAN DEFAULT FALSE
-      )
-    `);
-
     // Seed admin
     const [users] = await connection.query("SELECT * FROM users WHERE email = 'admin@start.ru'");
     if (users.length === 0) {
@@ -196,7 +214,13 @@ async function initDb() {
   } catch (err) {
     console.error("Database initialization error:", err);
   } finally {
-    connection.release();
+    if (connection) {
+      if (connection.release) {
+        connection.release();
+      } else {
+        await connection.end();
+      }
+    }
   }
 }
 
@@ -631,10 +655,13 @@ app.delete("/api/services/:id", authRequired, adminRequired, asyncHandler(async 
   res.status(204).end();
 }));
 
-// Global error handler
+// Global Error Handler
 app.use((err, req, res, next) => {
-  console.error("GLOBAL ERROR:", err);
-  res.status(500).json({ message: "Внутренняя ошибка сервера. Проверьте консоль." });
+  console.error("UNHANDLED ERROR:", err);
+  res.status(500).json({
+    message: "Внутренняя ошибка сервера",
+    error: process.env.NODE_ENV === "development" ? err.message : undefined
+  });
 });
 
 app.listen(PORT, "0.0.0.0", () => {
