@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <title>Избранное — Спортивный магазин</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+  <header class="site-header">
+    <div class="container header-inner">
+      <div class="logo" onclick="window.location.href='index.html'">
+        <img width="65%" height="20%" src="img/logo.png" alt="logo">
+      </div>
+      <nav class="main-nav">
+        <a href="index.html#catalog">Каталог</a>
+        <a href="services.html">Услуги</a>
+        <a href="index.html#about">О нас</a>
+        <a href="index.html#contacts">Контакты</a>
+      </nav>
+      <div class="header-actions">
+        <a class="pill" href="cart.html" aria-label="Корзина">
+          Корзина <span class="badge" id="cartCount">0</span>
+        </a>
+        <a class="pill hidden" id="myOrdersLink" href="my-orders.html">Мои заказы</a>
+        <button class="pill pill-muted" id="authButton" type="button">Войти</button>
+        <button class="pill pill-muted hidden" id="logoutButton" type="button">Выйти</button>
+        <a class="admin-link hidden" href="admin.html">Админ-панель</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="catalog animate-fade-in" style="margin-top: 40px;">
+      <header class="section-header">
+        <h1>Избранное</h1>
+        <p>Товары, которые вы сохранили.</p>
+      </header>
+
+      <div id="wishlistGrid" class="products-grid">
+        <!-- Товары рендерятся из JS -->
+      </div>
+
+      <div id="wishlistEmpty" class="empty-state hidden">
+        <div class="empty-icon">❤</div>
+        <h2>В избранном пока пусто</h2>
+        <p>Добавляйте товары в избранное, чтобы не потерять их.</p>
+        <a href="index.html#catalog" class="btn btn-primary">Перейти к покупкам</a>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <p>&copy; <span id="year">2024</span> СТАРТ. Все права защищены.</p>
+    </div>
+  </footer>
+
+  <!-- Scripts -->
+  <script src="js/api.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/cart.js"></script>
+  <script src="js/wishlist.js"></script>
+  <script src="js/script.js"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      function renderWishlist() {
+        const grid = document.getElementById("wishlistGrid");
+        const empty = document.getElementById("wishlistEmpty");
+        const products = loadProducts();
+        const wishlistIds = loadWishlist();
+        
+        const filtered = products.filter(p => wishlistIds.includes(p.id));
+        
+        if (grid) {
+          grid.innerHTML = "";
+          if (filtered.length === 0) {
+            empty?.classList.remove("hidden");
+          } else {
+            empty?.classList.add("hidden");
+            filtered.forEach((p, i) => {
+              grid.appendChild(createProductCard(p, i));
+            });
+          }
+        }
+      }
+      
+      document.addEventListener("wishlist:changed", renderWishlist);
+      renderWishlist();
+    });
+  </script>
+</body>
+</html>

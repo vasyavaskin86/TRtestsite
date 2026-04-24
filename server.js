@@ -366,18 +366,32 @@ app.post("/api/auth/register", asyncHandler(async (req, res) => {
   const { name, email, password } = req.body || {};
   if (!name || !email || !password) return res.status(400).json({ message: "Заполните все поля." });
   const normalizedEmail = String(email).trim().toLowerCase();
+  
+  const id = crypto.randomUUID();
+  const passwordHash = bcrypt.hashSync(String(password), 10);
+  const newUser = { id, name: String(name).trim(), email: normalizedEmail, passwordHash, isAdmin: false, createdAt: Date.now() };
+
+  if (useJsonFallback && jsonData) {
+    const existing = (jsonData.users || []).find(u => u.email === normalizedEmail);
+    if (existing) return res.status(400).json({ message: "Пользователь с таким e-mail уже существует." });
+    
+    // In fallback mode, we just keep it in memory (it won't persist across restarts)
+    if (!jsonData.users) jsonData.users = [];
+    jsonData.users.push(newUser);
+    const token = jwt.sign({ userId: id }, JWT_SECRET, { expiresIn: "7d" });
+    return res.json({ token, user: safeUser(newUser) });
+  }
+
   const [existing] = await pool.query("SELECT * FROM users WHERE email = ?", [normalizedEmail]);
   if (existing.length > 0) {
     return res.status(400).json({ message: "Пользователь с таким e-mail уже существует." });
   }
-  const id = crypto.randomUUID();
-  const passwordHash = bcrypt.hashSync(String(password), 10);
   await pool.query(
     "INSERT INTO users (id, name, email, passwordHash, isAdmin) VALUES (?, ?, ?, ?, ?)",
-    [id, String(name).trim(), normalizedEmail, passwordHash, false]
+    [id, newUser.name, normalizedEmail, passwordHash, false]
   );
   const token = jwt.sign({ userId: id }, JWT_SECRET, { expiresIn: "7d" });
-  res.json({ token, user: { id, name, email: normalizedEmail, isAdmin: false } });
+  res.json({ token, user: safeUser(newUser) });
 }));
 
 app.post("/api/auth/login", asyncHandler(async (req, res) => {
@@ -473,6 +487,17 @@ app.get("/api/settings/public", asyncHandler(async (_req, res) => {
 }));
 
 app.get("/api/admin/state", authRequired, adminRequired, asyncHandler(async (_req, res) => {
+  if (useJsonFallback && jsonData) {
+    return res.json({
+      products: (jsonData.products || []).map(p => ({ ...p, images: Array.isArray(p.images) ? p.images : [] })),
+      carouselSlides: jsonData.carousel_slides || jsonData.carousel || [],
+      promotions: jsonData.promotions || [],
+      news: jsonData.news || [],
+      orders: (jsonData.orders || []).map(o => ({ ...o, items: Array.isArray(o.items) ? o.items : [] })),
+      services: jsonData.services || [],
+      settings: (jsonData.settings && jsonData.settings[0]) || {},
+    });
+  }
   const [products] = await pool.query("SELECT * FROM products");
   const [carouselSlides] = await pool.query("SELECT * FROM carousel_slides");
   const [promotions] = await pool.query("SELECT * FROM promotions");
@@ -510,6 +535,19 @@ app.get("/api/admin/state", authRequired, adminRequired, asyncHandler(async (_re
 
 app.put("/api/admin/state", authRequired, adminRequired, asyncHandler(async (req, res) => {
   const { products, carouselSlides, promotions, news, orders, services, settings } = req.body || {};
+
+  if (useJsonFallback && jsonData) {
+    if (products) jsonData.products = products;
+    if (carouselSlides) jsonData.carousel_slides = carouselSlides;
+    if (promotions) jsonData.promotions = promotions;
+    if (news) jsonData.news = news;
+    if (orders) jsonData.orders = orders;
+    if (services) jsonData.services = services;
+    if (settings) jsonData.settings = [settings];
+    
+    // In fallback mode, changes are memory-only
+    return res.json({ ok: true, message: "Changes saved in memory (JSON Fallback mode)" });
+  }
 
   if (Array.isArray(products)) {
     await pool.query("DELETE FROM products");

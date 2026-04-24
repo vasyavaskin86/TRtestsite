@@ -485,6 +485,7 @@ function initCarousel() {
   function setIndex(i, { silent = false } = {}) {
     index = (i + slides.length) % slides.length;
     track.style.transform = `translateX(-${index * 100}%)`;
+    prevTranslate = -index * viewport.offsetWidth;
     dotsWrap.querySelectorAll(".dot").forEach((d) => {
       d.classList.toggle("active", d.dataset.dot === String(index));
     });
@@ -500,6 +501,52 @@ function initCarousel() {
     if (timer) window.clearInterval(timer);
     timer = null;
   }
+
+  // Swipe support
+  let startX = 0;
+  let isDragging = false;
+  let currentTranslate = 0;
+  let prevTranslate = 0;
+
+  function handleTouchStart(e) {
+    startX = e.type.includes('mouse') ? e.pageX : e.touches[0].clientX;
+    isDragging = true;
+    stop();
+    track.style.transition = 'none';
+  }
+
+  function handleTouchMove(e) {
+    if (!isDragging) return;
+    const currentX = e.type.includes('mouse') ? e.pageX : e.touches[0].clientX;
+    const diff = currentX - startX;
+    currentTranslate = prevTranslate + diff;
+    track.style.transform = `translateX(${currentTranslate}px)`;
+  }
+
+  function handleTouchEnd() {
+    if (!isDragging) return;
+    isDragging = false;
+    track.style.transition = 'transform var(--transition-normal, 0.3s ease)';
+    
+    const slideWidth = viewport.offsetWidth;
+    const diff = currentTranslate - prevTranslate;
+    
+    if (Math.abs(diff) > slideWidth / 4) {
+      if (diff > 0 && index > 0) index--;
+      else if (diff < 0 && index < slides.length - 1) index++;
+    }
+    
+    setIndex(index);
+    restart();
+  }
+
+  viewport.addEventListener('touchstart', handleTouchStart);
+  viewport.addEventListener('touchmove', handleTouchMove);
+  viewport.addEventListener('touchend', handleTouchEnd);
+  viewport.addEventListener('mousedown', handleTouchStart);
+  viewport.addEventListener('mousemove', handleTouchMove);
+  viewport.addEventListener('mouseup', handleTouchEnd);
+  viewport.addEventListener('mouseleave', handleTouchEnd);
 
   prev?.addEventListener("click", () => setIndex(index - 1));
   next?.addEventListener("click", () => setIndex(index + 1));
