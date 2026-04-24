@@ -622,8 +622,15 @@ app.post("/api/orders", authRequired, asyncHandler(async (req, res) => {
   if (!name || !email || !normalizedPhone) {
     return res.status(400).json({ message: "Укажите имя, e-mail и телефон для заказа." });
   }
-  const [users] = await pool.query("SELECT * FROM users WHERE id = ?", [req.userId]);
-  const user = users[0];
+
+  let user;
+  if (useJsonFallback && jsonData) {
+    user = (jsonData.users || []).find(u => u.id === req.userId);
+  } else {
+    const [users] = await pool.query("SELECT * FROM users WHERE id = ?", [req.userId]);
+    user = users[0];
+  }
+  
   if (!user) return res.status(401).json({ message: "Пользователь не найден." });
 
   const productIds = items.map(i => i.productId).filter(Boolean);
