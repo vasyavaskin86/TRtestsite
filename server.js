@@ -9,33 +9,44 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 const JWT_SECRET = process.env.JWT_SECRET || "start-super-secret-change-me";
 
-// MySQL connection pool
+// MySQL connection pool configuration
 const dbName = process.env.DB_NAME || "sportzone";
 
 function getPoolConfig() {
-  if (process.env.DATABASE_URL) {
-    // If DATABASE_URL is provided, we use it directly. 
-    // We add SSL if it's a cloud DB (usually the case with DATABASE_URL)
-    const url = process.env.DATABASE_URL;
-    return url.includes('ssl=') ? url : `${url}${url.includes('?') ? '&' : '?'}ssl={"rejectUnauthorized":false}`;
-  }
-  
-  return {
-    host: process.env.DB_HOST || "localhost",
-    user: process.env.DB_USER || "root",
-    password: process.env.DB_PASS || "root",
-    port: parseInt(process.env.DB_PORT || "3306"),
-    database: dbName,
+  const config = {
     waitForConnections: true,
     connectionLimit: 10,
     queueLimit: 0,
-    ssl: process.env.DB_SSL === "true" ? { rejectUnauthorized: false } : undefined,
+    ssl: { rejectUnauthorized: false }
   };
+
+  if (process.env.DATABASE_URL) {
+    // mysql2 supports connection string, but SSL is tricky in the string.
+    // It's safer to use the string but ensure SSL is attached if it's a cloud DB.
+    let url = process.env.DATABASE_URL;
+    if (!url.includes('ssl=')) {
+      url += (url.includes('?') ? '&' : '?') + 'ssl={"rejectUnauthorized":false}';
+    }
+    return url;
+  } else {
+    config.host = process.env.DB_HOST || "localhost";
+    config.user = process.env.DB_USER || "root";
+    config.password = process.env.DB_PASS || "root";
+    config.port = parseInt(process.env.DB_PORT || "3306");
+    config.database = dbName;
+    
+    if (process.env.DB_SSL !== "true" && process.env.NODE_ENV !== "production") {
+      delete config.ssl;
+    }
+  }
+  
+  return config;
 }
 
 let pool = mysql.createPool(getPoolConfig());
 
 // Database initialization
+let dbInitError = null;
 async function initDb() {
   let connection;
   try {
@@ -48,29 +59,24 @@ async function initDb() {
     } catch (e) {
       console.log(`Initial connection failed: ${e.message}`);
       
-      // If we are NOT using DATABASE_URL, we can try to create the database
+      // If NOT using DATABASE_URL, try to create the database
       if (!process.env.DATABASE_URL) {
         console.log(`Trying to create database ${dbName} if it doesn't exist...`);
-        const tempConn = await mysql.createConnection({
-          host: process.env.DB_HOST || "localhost",
-          user: process.env.DB_USER || "root",
-          password: process.env.DB_PASS || "root",
-          port: parseInt(process.env.DB_PORT || "3306"),
-          ssl: process.env.DB_SSL === "true" ? { rejectUnauthorized: false } : undefined,
-        });
+        const tempConnConfig = { ...getPoolConfig() };
+        delete tempConnConfig.database;
+        
+        const tempConn = await mysql.createConnection(tempConnConfig);
         await tempConn.query(`CREATE DATABASE IF NOT EXISTS \`${dbName}\``);
         await tempConn.end();
         
-        // Try connecting again after creation
         connection = await pool.getConnection();
         console.log(`Database ${dbName} created/verified and connected.`);
       } else {
-        // If DATABASE_URL failed, we can't do much but throw
         throw e;
       }
     }
 
-    if (!process.env.DATABASE_URL) {
+    if (connection) {
       await connection.query(`USE \`${dbName}\``);
     }
 
@@ -229,6 +235,7 @@ async function initDb() {
     }
 
   } catch (err) {
+    dbInitError = err.message || String(err);
     console.error("Database initialization error:", err);
   } finally {
     if (connection) {
@@ -303,10 +310,22 @@ const adminRequired = asyncHandler(async (req, res, next) => {
 
 app.get("/api/health", asyncHandler(async (_req, res) => {
   try {
-    await pool.query("SELECT 1");
-    res.json({ status: "ok", database: "connected" });
+    const [rows] = await pool.query("SELECT 1 as connected");
+    res.json({ 
+      status: "ok", 
+      database: "connected", 
+      dbInitError: dbInitError,
+      env: {
+        hasDbUrl: !!process.env.DATABASE_URL,
+        nodeEnv: process.env.NODE_ENV
+      }
+    });
   } catch (e) {
-    res.status(500).json({ status: "error", database: e.message });
+    res.status(500).json({ 
+      status: "error", 
+      database: e.message || String(e),
+      dbInitError: dbInitError
+    });
   }
 }));
 
@@ -682,11 +701,20 @@ app.delete("/api/services/:id", authRequired, adminRequired, asyncHandler(async 
 // Global Error Handler
 app.use((err, req, res, next) => {
   console.error("UNHANDLED ERROR:", err);
-  res.status(500).json({
+  
+  // Create a clean error object for response
+  const errorResponse = {
     message: "Внутренняя ошибка сервера",
-    error: err.message, // Временно показываем ошибку всегда для отладки
-    stack: process.env.NODE_ENV === "development" ? err.stack : undefined
-  });
+    error: err.message || String(err),
+    code: err.code, // Useful for MySQL errors like 'ECONNREFUSED'
+    dbInitError: dbInitError
+  };
+
+  if (process.env.NODE_ENV === "development") {
+    errorResponse.stack = err.stack;
+  }
+
+  res.status(500).json(errorResponse);
 });
 
 app.listen(PORT, "0.0.0.0", () => {
