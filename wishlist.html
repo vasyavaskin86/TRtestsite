@@ -12,7 +12,7 @@
       <div class="logo" onclick="window.location.href='index.html'">
         <img width="65%" height="20%" src="img/logo.png" alt="logo">
       </div>
-      <nav class="main-nav">
+      <nav class="main-nav" id="mainNav">
         <a href="index.html#catalog">Каталог</a>
         <a href="services.html">Услуги</a>
         <a href="index.html#about">О нас</a>
@@ -26,6 +26,11 @@
         <button class="pill pill-muted" id="authButton" type="button">Войти</button>
         <button class="pill pill-muted hidden" id="logoutButton" type="button">Выйти</button>
         <a class="admin-link hidden" href="admin.html">Админ-панель</a>
+        <button class="burger-menu" id="burgerMenu" aria-label="Меню">
+          <span></span>
+          <span></span>
+          <span></span>
+        </button>
       </div>
     </div>
   </header>
@@ -84,6 +89,29 @@
           }
         }
       }
+      
+      // Fix for "add to cart" and "product click" in wishlist
+      document.getElementById("wishlistGrid")?.addEventListener("click", (e) => {
+        const target = e.target;
+        if (!(target instanceof HTMLElement)) return;
+        
+        // Handle add to cart
+        const addToCartId = target.dataset.addToCart || target.closest("[data-add-to-cart]")?.dataset.addToCart;
+        if (addToCartId) {
+          if (typeof addToCart === "function") addToCart(addToCartId, 1);
+          return;
+        }
+
+        // Handle card click (navigation to product page)
+        // Ensure we don't navigate if wishlist button or add to cart button was clicked
+        if (target.closest("[data-wishlist-toggle]")) return;
+        
+        const card = target.closest(".product-card");
+        if (card instanceof HTMLElement) {
+          const id = card.dataset.productId;
+          if (id) window.location.href = `product.html?id=${encodeURIComponent(id)}`;
+        }
+      });
       
       document.addEventListener("wishlist:changed", renderWishlist);
       renderWishlist();

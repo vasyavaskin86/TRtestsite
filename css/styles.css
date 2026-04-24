@@ -180,11 +180,69 @@ button, a [role="button"], .btn {
   background: radial-gradient(circle at 100% 0%, rgba(249, 115, 22, 0.2), rgba(255, 255, 255, 0.95));
 }
 
-.main-nav {
+.burger-menu {
   display: flex;
-  gap: 18px;
-  font-size: 0.9rem;
-  color: var(--text-muted);
+  flex-direction: column;
+  gap: 4px;
+  background: none;
+  border: none;
+  padding: 8px;
+  cursor: pointer;
+  z-index: 101;
+}
+
+.burger-menu span {
+  display: block;
+  width: 24px;
+  height: 2px;
+  background: var(--text-main);
+  transition: all 0.3s ease;
+}
+
+.main-nav {
+  position: fixed;
+  top: 0;
+  right: -100%;
+  width: 320px;
+  height: 100vh;
+  background: white;
+  flex-direction: column;
+  padding: 100px 40px 40px;
+  box-shadow: -10px 0 30px rgba(0, 0, 0, 0.1);
+  transition: right 0.3s ease;
+  z-index: 100;
+  display: flex;
+  gap: 20px;
+  font-size: 1.1rem;
+}
+
+.main-nav a {
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border-subtle);
+  width: 100%;
+  border-radius: 0;
+}
+
+.main-nav a:hover {
+  background: none;
+  color: var(--accent);
+  transform: translateX(5px);
+}
+
+.main-nav.active {
+  right: 0;
+}
+
+.burger-menu.active span:nth-child(1) {
+  transform: translateY(6px) rotate(45deg);
+}
+
+.burger-menu.active span:nth-child(2) {
+  opacity: 0;
+}
+
+.burger-menu.active span:nth-child(3) {
+  transform: translateY(-6px) rotate(-45deg);
 }
 
 .main-nav a {
@@ -1068,19 +1126,38 @@ button, a [role="button"], .btn {
   }
 
   .cart-item {
-    grid-template-columns: 80px 1fr auto;
+    display: grid;
+    grid-template-columns: 80px 1fr;
+    grid-template-areas: 
+      "img info"
+      "img controls";
     gap: 12px;
-    padding: 10px;
+    padding: 12px;
+    position: relative;
   }
 
   .cart-item-img {
+    grid-area: img;
     width: 80px;
     height: 80px;
   }
 
+  .cart-item-main {
+    grid-area: info;
+  }
+
   .cart-item-controls {
-    flex-direction: column;
-    align-items: flex-end;
+    grid-area: controls;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+  }
+
+  .cart-item-remove {
+    position: absolute;
+    top: 8px;
+    right: 8px;
   }
 
   .qty-input {
@@ -1090,10 +1167,11 @@ button, a [role="button"], .btn {
   .cart-summary-box {
     position: sticky;
     bottom: 0;
-    margin: 0 -20px;
+    margin: 0 -20px -20px;
     border-radius: var(--radius-lg) var(--radius-lg) 0 0;
     box-shadow: 0 -10px 25px rgba(0,0,0,0.1);
     z-index: 10;
+    padding: 20px;
   }
 }
 

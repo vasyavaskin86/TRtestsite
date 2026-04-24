@@ -852,5 +852,25 @@ document.addEventListener("DOMContentLoaded", async () => {
   document.addEventListener("cart:changed", () => {
     setCartCountUI();
   });
+
+  // Burger Menu
+  const burgerMenu = document.getElementById("burgerMenu");
+  const mainNav = document.getElementById("mainNav");
+  
+  if (burgerMenu && mainNav) {
+    burgerMenu.addEventListener("click", () => {
+      burgerMenu.classList.toggle("active");
+      mainNav.classList.toggle("active");
+      document.body.classList.toggle("no-scroll");
+    });
+
+    mainNav.querySelectorAll("a").forEach(link => {
+      link.addEventListener("click", () => {
+        burgerMenu.classList.remove("active");
+        mainNav.classList.remove("active");
+        document.body.classList.remove("no-scroll");
+      });
+    });
+  }
 });
 

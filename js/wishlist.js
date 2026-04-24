@@ -36,7 +36,8 @@ function updateWishlistUI() {
   const el = document.getElementById("wishlistCount");
   if (el) {
     el.textContent = String(count);
-    el.closest(".pill").classList.toggle("hidden", count === 0 && !window.location.pathname.includes("wishlist"));
+    // Remove the toggle that hides the pill when count is 0
+    el.closest(".pill").classList.remove("hidden");
   }
   
   // Update all heart icons on page

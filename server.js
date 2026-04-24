@@ -327,6 +327,12 @@ const authRequired = asyncHandler(async (req, res, next) => {
 });
 
 const adminRequired = asyncHandler(async (req, res, next) => {
+  if (useJsonFallback && jsonData) {
+    const user = (jsonData.users || []).find(u => u.id === req.userId);
+    if (!user || !user.isAdmin) return res.status(403).json({ message: "Недостаточно прав." });
+    req.currentUser = user;
+    return next();
+  }
   const [users] = await pool.query("SELECT * FROM users WHERE id = ?", [req.userId]);
   const user = users[0];
   if (!user || !user.isAdmin) return res.status(403).json({ message: "Недостаточно прав." });
