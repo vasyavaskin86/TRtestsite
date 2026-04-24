@@ -10,17 +10,21 @@ const PORT = process.env.PORT || 3001;
 const JWT_SECRET = process.env.JWT_SECRET || "start-super-secret-change-me";
 
 // MySQL connection pool
-let poolConfig;
 const dbName = process.env.DB_NAME || "sportzone";
 
-if (process.env.DATABASE_URL) {
-  poolConfig = process.env.DATABASE_URL + (process.env.DATABASE_URL.includes('?') ? '&' : '?') + "ssl={\"rejectUnauthorized\":false}";
-} else {
-  poolConfig = {
+function getPoolConfig() {
+  if (process.env.DATABASE_URL) {
+    // If DATABASE_URL is provided, we use it directly. 
+    // We add SSL if it's a cloud DB (usually the case with DATABASE_URL)
+    const url = process.env.DATABASE_URL;
+    return url.includes('ssl=') ? url : `${url}${url.includes('?') ? '&' : '?'}ssl={"rejectUnauthorized":false}`;
+  }
+  
+  return {
     host: process.env.DB_HOST || "localhost",
     user: process.env.DB_USER || "root",
     password: process.env.DB_PASS || "root",
-    port: process.env.DB_PORT || 3306,
+    port: parseInt(process.env.DB_PORT || "3306"),
     database: dbName,
     waitForConnections: true,
     connectionLimit: 10,
@@ -29,33 +33,46 @@ if (process.env.DATABASE_URL) {
   };
 }
 
-let pool = mysql.createPool(poolConfig);
+let pool = mysql.createPool(getPoolConfig());
 
 // Database initialization
 async function initDb() {
   let connection;
   try {
-    // Try to get a connection to verify database existence
+    console.log("Attempting to connect to database...");
+    
+    // Try to get a connection from the pool
     try {
       connection = await pool.getConnection();
-      console.log(`Connected to database ${dbName} successfully.`);
+      console.log(`Successfully connected to database.`);
     } catch (e) {
-      console.log(`Initial connection failed: ${e.message}. Trying to create database if it doesn't exist...`);
+      console.log(`Initial connection failed: ${e.message}`);
       
-      // If failed, try to connect without database name to create it
-      const noDbConfig = typeof poolConfig === 'string' 
-        ? poolConfig.replace(/\/[^/?]+\?/, '/?') // This is a bit hacky for URL
-        : { ...poolConfig, database: undefined };
-      
-      const tempConn = await mysql.createConnection(noDbConfig);
-      await tempConn.query(`CREATE DATABASE IF NOT EXISTS \`${dbName}\``);
-      await tempConn.end();
-      
-      connection = await pool.getConnection();
-      console.log(`Database ${dbName} created and connected.`);
+      // If we are NOT using DATABASE_URL, we can try to create the database
+      if (!process.env.DATABASE_URL) {
+        console.log(`Trying to create database ${dbName} if it doesn't exist...`);
+        const tempConn = await mysql.createConnection({
+          host: process.env.DB_HOST || "localhost",
+          user: process.env.DB_USER || "root",
+          password: process.env.DB_PASS || "root",
+          port: parseInt(process.env.DB_PORT || "3306"),
+          ssl: process.env.DB_SSL === "true" ? { rejectUnauthorized: false } : undefined,
+        });
+        await tempConn.query(`CREATE DATABASE IF NOT EXISTS \`${dbName}\``);
+        await tempConn.end();
+        
+        // Try connecting again after creation
+        connection = await pool.getConnection();
+        console.log(`Database ${dbName} created/verified and connected.`);
+      } else {
+        // If DATABASE_URL failed, we can't do much but throw
+        throw e;
+      }
     }
 
-    await connection.query(`USE \`${dbName}\``);
+    if (!process.env.DATABASE_URL) {
+      await connection.query(`USE \`${dbName}\``);
+    }
 
     await connection.query(`
       CREATE TABLE IF NOT EXISTS users (
@@ -284,7 +301,14 @@ const adminRequired = asyncHandler(async (req, res, next) => {
   next();
 });
 
-app.get("/api/health", (_req, res) => res.json({ ok: true }));
+app.get("/api/health", asyncHandler(async (_req, res) => {
+  try {
+    await pool.query("SELECT 1");
+    res.json({ status: "ok", database: "connected" });
+  } catch (e) {
+    res.status(500).json({ status: "error", database: e.message });
+  }
+}));
 
 app.post("/api/auth/register", asyncHandler(async (req, res) => {
   const { name, email, password } = req.body || {};
@@ -660,7 +684,8 @@ app.use((err, req, res, next) => {
   console.error("UNHANDLED ERROR:", err);
   res.status(500).json({
     message: "Внутренняя ошибка сервера",
-    error: process.env.NODE_ENV === "development" ? err.message : undefined
+    error: err.message, // Временно показываем ошибку всегда для отладки
+    stack: process.env.NODE_ENV === "development" ? err.stack : undefined
   });
 });
 
