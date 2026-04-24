@@ -29,11 +29,16 @@ function getPoolConfig() {
     }
     return url;
   } else {
-    config.host = process.env.DB_HOST || "localhost";
+    config.host = process.env.DB_HOST || "127.0.0.1"; // Use 127.0.0.1 instead of localhost for Node 17+
     config.user = process.env.DB_USER || "root";
     config.password = process.env.DB_PASS || "root";
     config.port = parseInt(process.env.DB_PORT || "3306");
     config.database = dbName;
+    
+    // On Render, if we don't have a DB_HOST or DATABASE_URL, we are likely to fail
+    if (!process.env.DB_HOST && !process.env.DATABASE_URL && process.env.RENDER) {
+      console.warn("WARNING: Running on Render but no DATABASE_URL or DB_HOST provided. Connection will likely fail.");
+    }
     
     if (process.env.DB_SSL !== "true" && process.env.NODE_ENV !== "production") {
       delete config.ssl;
@@ -47,6 +52,9 @@ let pool = mysql.createPool(getPoolConfig());
 
 // Database initialization
 let dbInitError = null;
+let useJsonFallback = false;
+let jsonData = null;
+
 async function initDb() {
   let connection;
   try {
@@ -63,14 +71,16 @@ async function initDb() {
       if (!process.env.DATABASE_URL) {
         console.log(`Trying to create database ${dbName} if it doesn't exist...`);
         const tempConnConfig = { ...getPoolConfig() };
-        delete tempConnConfig.database;
-        
-        const tempConn = await mysql.createConnection(tempConnConfig);
-        await tempConn.query(`CREATE DATABASE IF NOT EXISTS \`${dbName}\``);
-        await tempConn.end();
-        
-        connection = await pool.getConnection();
-        console.log(`Database ${dbName} created/verified and connected.`);
+        if (typeof tempConnConfig === 'object') {
+          delete tempConnConfig.database;
+          const tempConn = await mysql.createConnection(tempConnConfig);
+          await tempConn.query(`CREATE DATABASE IF NOT EXISTS \`${dbName}\``);
+          await tempConn.end();
+          connection = await pool.getConnection();
+          console.log(`Database ${dbName} created/verified and connected.`);
+        } else {
+          throw e;
+        }
       } else {
         throw e;
       }
@@ -79,6 +89,8 @@ async function initDb() {
     if (connection) {
       await connection.query(`USE \`${dbName}\``);
     }
+
+    // ... tables creation ...
 
     await connection.query(`
       CREATE TABLE IF NOT EXISTS users (
@@ -237,6 +249,20 @@ async function initDb() {
   } catch (err) {
     dbInitError = err.message || String(err);
     console.error("Database initialization error:", err);
+    
+    // Try to load JSON fallback
+    try {
+      const fs = require("fs");
+      const path = require("path");
+      const dbPath = path.join(__dirname, "data", "db.json");
+      if (fs.existsSync(dbPath)) {
+        jsonData = JSON.parse(fs.readFileSync(dbPath, "utf8"));
+        useJsonFallback = true;
+        console.log("CRITICAL: Using JSON fallback because MySQL connection failed.");
+      }
+    } catch (jsonErr) {
+      console.error("Failed to load JSON fallback:", jsonErr);
+    }
   } finally {
     if (connection) {
       if (connection.release) {
@@ -310,14 +336,21 @@ const adminRequired = asyncHandler(async (req, res, next) => {
 
 app.get("/api/health", asyncHandler(async (_req, res) => {
   try {
-    const [rows] = await pool.query("SELECT 1 as connected");
+    let dbStatus = "connected";
+    if (useJsonFallback) {
+      dbStatus = "using_json_fallback";
+    } else {
+      await pool.query("SELECT 1");
+    }
+    
     res.json({ 
       status: "ok", 
-      database: "connected", 
+      database: dbStatus, 
       dbInitError: dbInitError,
       env: {
         hasDbUrl: !!process.env.DATABASE_URL,
-        nodeEnv: process.env.NODE_ENV
+        nodeEnv: process.env.NODE_ENV,
+        render: !!process.env.RENDER
       }
     });
   } catch (e) {
@@ -350,6 +383,16 @@ app.post("/api/auth/register", asyncHandler(async (req, res) => {
 app.post("/api/auth/login", asyncHandler(async (req, res) => {
   const { email, password } = req.body || {};
   const normalizedEmail = String(email || "").trim().toLowerCase();
+
+  if (useJsonFallback && jsonData) {
+    const user = (jsonData.users || []).find(u => u.email === normalizedEmail);
+    if (!user || !bcrypt.compareSync(String(password || ""), user.passwordHash)) {
+      return res.status(400).json({ message: "Неверный e-mail или пароль." });
+    }
+    const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: "7d" });
+    return res.json({ token, user: safeUser(user) });
+  }
+
   const [users] = await pool.query("SELECT * FROM users WHERE email = ?", [normalizedEmail]);
   const user = users[0];
   if (!user || !bcrypt.compareSync(String(password || ""), user.passwordHash)) {
@@ -360,6 +403,11 @@ app.post("/api/auth/login", asyncHandler(async (req, res) => {
 }));
 
 app.get("/api/auth/me", authRequired, asyncHandler(async (req, res) => {
+  if (useJsonFallback && jsonData) {
+    const user = (jsonData.users || []).find(u => u.id === req.userId);
+    if (!user) return res.status(401).json({ message: "Пользователь не найден." });
+    return res.json({ user: safeUser(user) });
+  }
   const [users] = await pool.query("SELECT * FROM users WHERE id = ?", [req.userId]);
   const user = users[0];
   if (!user) return res.status(401).json({ message: "Пользователь не найден." });
@@ -367,6 +415,9 @@ app.get("/api/auth/me", authRequired, asyncHandler(async (req, res) => {
 }));
 
 app.get("/api/products", asyncHandler(async (_req, res) => {
+  if (useJsonFallback && jsonData) {
+    return res.json(jsonData.products || []);
+  }
   const [rows] = await pool.query("SELECT * FROM products");
   res.json(rows.map(r => {
     let imgs = [];
@@ -378,26 +429,39 @@ app.get("/api/products", asyncHandler(async (_req, res) => {
 }));
 
 app.get("/api/carousel", asyncHandler(async (_req, res) => {
+  if (useJsonFallback && jsonData) return res.json(jsonData.carousel_slides || jsonData.carousel || []);
   const [rows] = await pool.query("SELECT * FROM carousel_slides");
   res.json(rows);
 }));
 
 app.get("/api/promotions", asyncHandler(async (_req, res) => {
+  if (useJsonFallback && jsonData) return res.json(jsonData.promotions || []);
   const [rows] = await pool.query("SELECT * FROM promotions");
   res.json(rows);
 }));
 
 app.get("/api/news", asyncHandler(async (_req, res) => {
+  if (useJsonFallback && jsonData) return res.json(jsonData.news || []);
   const [rows] = await pool.query("SELECT * FROM news");
   res.json(rows);
 }));
 
 app.get("/api/services", asyncHandler(async (_req, res) => {
+  if (useJsonFallback && jsonData) return res.json(jsonData.services || []);
   const [rows] = await pool.query("SELECT * FROM services");
   res.json(rows);
 }));
 
 app.get("/api/settings/public", asyncHandler(async (_req, res) => {
+  if (useJsonFallback && jsonData) {
+    const s = (jsonData.settings && jsonData.settings[0]) || {};
+    return res.json({
+      enableOnlinePayment: Boolean(s.enableOnlinePayment),
+      enableDeliveryForm: Boolean(s.enableDeliveryForm),
+      enableWarehouseStocks: Boolean(s.enableWarehouseStocks),
+      enable1CIntegration: Boolean(s.enable1CIntegration),
+    });
+  }
   const [rows] = await pool.query("SELECT * FROM settings LIMIT 1");
   const s = rows[0] || {};
   res.json({
@@ -702,15 +766,29 @@ app.delete("/api/services/:id", authRequired, adminRequired, asyncHandler(async 
 app.use((err, req, res, next) => {
   console.error("UNHANDLED ERROR:", err);
   
-  // Create a clean error object for response
+  let friendlyMessage = "Внутренняя ошибка сервера";
+  let hint = undefined;
+
+  if (err.code === 'ECONNREFUSED') {
+    friendlyMessage = "Ошибка подключения к базе данных";
+    hint = "Сервер не может найти базу данных MySQL. На Render.com необходимо создать отдельную базу данных (например, на Aiven или PlanetScale) и добавить переменную DATABASE_URL в настройках.";
+  }
+
+  // Extract more info from AggregateError
+  let errorDetail = err.message || String(err);
+  if (err.errors && Array.isArray(err.errors)) {
+    errorDetail = err.errors.map(e => e.message).join('; ');
+  }
+
   const errorResponse = {
-    message: "Внутренняя ошибка сервера",
-    error: err.message || String(err),
-    code: err.code, // Useful for MySQL errors like 'ECONNREFUSED'
+    message: friendlyMessage,
+    error: errorDetail,
+    code: err.code,
+    hint: hint,
     dbInitError: dbInitError
   };
 
-  if (process.env.NODE_ENV === "development") {
+  if (process.env.NODE_ENV === "development" || true) { // Временно оставляем true для отладки
     errorResponse.stack = err.stack;
   }
 
