@@ -52,6 +52,23 @@ let dbInitError = null;
 let useJsonFallback = false;
 let jsonData = null;
 
+const fs = require("fs");
+const path = require("path");
+const dbPath = path.join(__dirname, "data", "db.json");
+
+function saveJsonData() {
+  if (!useJsonFallback || !jsonData) return;
+  try {
+    if (!fs.existsSync(path.dirname(dbPath))) {
+      fs.mkdirSync(path.dirname(dbPath), { recursive: true });
+    }
+    fs.writeFileSync(dbPath, JSON.stringify(jsonData, null, 2), "utf8");
+    console.log("JSON fallback data saved to db.json");
+  } catch (err) {
+    console.error("Failed to save JSON fallback data:", err);
+  }
+}
+
 async function initDb() {
   let connection;
   try {
@@ -254,15 +271,12 @@ async function initDb() {
     
     // Try to load JSON fallback
     try {
-      const fs = require("fs");
-      const path = require("path");
-      const dbPath = path.join(__dirname, "data", "db.json");
       if (fs.existsSync(dbPath)) {
         jsonData = JSON.parse(fs.readFileSync(dbPath, "utf8")) || {};
         useJsonFallback = true;
         console.log("CRITICAL: Using JSON fallback because MySQL connection failed.");
       } else {
-        jsonData = {};
+        jsonData = { users: [], products: [], carousel_slides: [], promotions: [], news: [], orders: [], services: [], settings: [{}] };
         useJsonFallback = true;
         console.log("CRITICAL: No db.json found, using empty object fallback.");
       }
@@ -394,9 +408,9 @@ app.post("/api/auth/register", asyncHandler(async (req, res) => {
     const existing = (jsonData.users || []).find(u => u.email === normalizedEmail);
     if (existing) return res.status(400).json({ message: "Пользователь с таким e-mail уже существует." });
     
-    // In fallback mode, we just keep it in memory (it won't persist across restarts)
     if (!jsonData.users) jsonData.users = [];
     jsonData.users.push(newUser);
+    saveJsonData();
     const token = jwt.sign({ userId: id }, JWT_SECRET, { expiresIn: "7d" });
     return res.json({ token, user: safeUser(newUser) });
   }
@@ -456,6 +470,7 @@ app.put("/api/auth/profile", authRequired, asyncHandler(async (req, res) => {
     if (name) user.name = name;
     if (lastName !== undefined) user.lastName = lastName;
     if (phone !== undefined) user.phone = phone;
+    saveJsonData();
     return res.json({ user: safeUser(user) });
   }
 
@@ -585,8 +600,8 @@ app.put("/api/admin/state", authRequired, adminRequired, asyncHandler(async (req
     if (services) jsonData.services = services;
     if (settings) jsonData.settings = [settings];
     
-    // In fallback mode, changes are memory-only
-    return res.json({ ok: true, message: "Changes saved in memory (JSON Fallback mode)" });
+    saveJsonData();
+    return res.json({ ok: true, message: "Changes saved to db.json (JSON Fallback mode)" });
   }
 
   if (Array.isArray(products)) {
@@ -687,6 +702,7 @@ app.post("/api/orders", authRequired, asyncHandler(async (req, res) => {
     };
     if (!jsonData.orders) jsonData.orders = [];
     jsonData.orders.push(newOrder);
+    saveJsonData();
     return res.status(201).json({ id: orderId, total, items: enriched });
   }
 
@@ -739,6 +755,7 @@ app.patch("/api/orders/:id/status", authRequired, adminRequired, asyncHandler(as
     const order = (jsonData.orders || []).find(o => o.id === req.params.id);
     if (!order) return res.status(404).json({ message: "Заказ не найден." });
     order.status = status;
+    saveJsonData();
     return res.json({ ...order, items: Array.isArray(order.items) ? order.items : [] });
   }
 
@@ -756,6 +773,15 @@ app.patch("/api/orders/:id/status", authRequired, adminRequired, asyncHandler(as
 app.post("/api/products", authRequired, adminRequired, asyncHandler(async (req, res) => {
   const id = crypto.randomUUID();
   const p = req.body;
+  
+  if (useJsonFallback && jsonData) {
+    if (!jsonData.products) jsonData.products = [];
+    const newProduct = { id, ...p };
+    jsonData.products.push(newProduct);
+    saveJsonData();
+    return res.status(201).json(newProduct);
+  }
+
   await pool.query(
     "INSERT INTO products (id, name, category, price, description, fullDescription, images, tag, attributes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
     [id, p.name, p.category, p.price, p.description, p.fullDescription, JSON.stringify(p.images || []), p.tag, JSON.stringify(p.attributes || {})]
@@ -765,6 +791,15 @@ app.post("/api/products", authRequired, adminRequired, asyncHandler(async (req, 
 
 app.put("/api/products/:id", authRequired, adminRequired, asyncHandler(async (req, res) => {
   const p = req.body;
+  
+  if (useJsonFallback && jsonData) {
+    const idx = (jsonData.products || []).findIndex(x => x.id === req.params.id);
+    if (idx === -1) return res.status(404).json({ message: "Товар не найден." });
+    jsonData.products[idx] = { ...jsonData.products[idx], ...p };
+    saveJsonData();
+    return res.json(jsonData.products[idx]);
+  }
+
   await pool.query(
     "UPDATE products SET name=?, category=?, price=?, description=?, fullDescription=?, images=?, tag=?, attributes=? WHERE id=?",
     [p.name, p.category, p.price, p.description, p.fullDescription, JSON.stringify(p.images || []), p.tag, JSON.stringify(p.attributes || {}), req.params.id]
@@ -773,6 +808,12 @@ app.put("/api/products/:id", authRequired, adminRequired, asyncHandler(async (re
 }));
 
 app.delete("/api/products/:id", authRequired, adminRequired, asyncHandler(async (req, res) => {
+  if (useJsonFallback && jsonData) {
+    jsonData.products = (jsonData.products || []).filter(x => x.id !== req.params.id);
+    saveJsonData();
+    return res.status(204).end();
+  }
+
   await pool.query("DELETE FROM products WHERE id = ?", [req.params.id]);
   res.status(204).end();
 }));
@@ -781,6 +822,15 @@ app.delete("/api/products/:id", authRequired, adminRequired, asyncHandler(async 
 app.post("/api/carousel", authRequired, adminRequired, asyncHandler(async (req, res) => {
   const id = crypto.randomUUID();
   const { image, title, text, link } = req.body;
+  
+  if (useJsonFallback && jsonData) {
+    if (!jsonData.carousel_slides) jsonData.carousel_slides = [];
+    const newItem = { id, image, title, text, link };
+    jsonData.carousel_slides.push(newItem);
+    saveJsonData();
+    return res.status(201).json(newItem);
+  }
+
   await pool.query(
     "INSERT INTO carousel_slides (id, image, title, text, link) VALUES (?, ?, ?, ?, ?)",
     [id, image, title, text, link]
@@ -790,6 +840,15 @@ app.post("/api/carousel", authRequired, adminRequired, asyncHandler(async (req, 
 
 app.put("/api/carousel/:id", authRequired, adminRequired, asyncHandler(async (req, res) => {
   const { image, title, text, link } = req.body;
+  
+  if (useJsonFallback && jsonData) {
+    const idx = (jsonData.carousel_slides || []).findIndex(x => x.id === req.params.id);
+    if (idx === -1) return res.status(404).json({ message: "Слайд не найден." });
+    jsonData.carousel_slides[idx] = { ...jsonData.carousel_slides[idx], image, title, text, link };
+    saveJsonData();
+    return res.json(jsonData.carousel_slides[idx]);
+  }
+
   await pool.query(
     "UPDATE carousel_slides SET image=?, title=?, text=?, link=? WHERE id=?",
     [image, title, text, link, req.params.id]
@@ -798,6 +857,12 @@ app.put("/api/carousel/:id", authRequired, adminRequired, asyncHandler(async (re
 }));
 
 app.delete("/api/carousel/:id", authRequired, adminRequired, asyncHandler(async (req, res) => {
+  if (useJsonFallback && jsonData) {
+    jsonData.carousel_slides = (jsonData.carousel_slides || []).filter(x => x.id !== req.params.id);
+    saveJsonData();
+    return res.status(204).end();
+  }
+
   await pool.query("DELETE FROM carousel_slides WHERE id = ?", [req.params.id]);
   res.status(204).end();
 }));
@@ -806,6 +871,15 @@ app.delete("/api/carousel/:id", authRequired, adminRequired, asyncHandler(async 
 app.post("/api/promotions", authRequired, adminRequired, asyncHandler(async (req, res) => {
   const id = crypto.randomUUID();
   const { title, description, image, discount } = req.body;
+  
+  if (useJsonFallback && jsonData) {
+    if (!jsonData.promotions) jsonData.promotions = [];
+    const newItem = { id, title, description, image, discount };
+    jsonData.promotions.push(newItem);
+    saveJsonData();
+    return res.status(201).json(newItem);
+  }
+
   await pool.query(
     "INSERT INTO promotions (id, title, description, image, discount) VALUES (?, ?, ?, ?, ?)",
     [id, title, description, image, discount]
@@ -815,6 +889,15 @@ app.post("/api/promotions", authRequired, adminRequired, asyncHandler(async (req
 
 app.put("/api/promotions/:id", authRequired, adminRequired, asyncHandler(async (req, res) => {
   const { title, description, image, discount } = req.body;
+  
+  if (useJsonFallback && jsonData) {
+    const idx = (jsonData.promotions || []).findIndex(x => x.id === req.params.id);
+    if (idx === -1) return res.status(404).json({ message: "Акция не найдена." });
+    jsonData.promotions[idx] = { ...jsonData.promotions[idx], title, description, image, discount };
+    saveJsonData();
+    return res.json(jsonData.promotions[idx]);
+  }
+
   await pool.query(
     "UPDATE promotions SET title=?, description=?, image=?, discount=? WHERE id=?",
     [title, description, image, discount, req.params.id]
@@ -823,6 +906,12 @@ app.put("/api/promotions/:id", authRequired, adminRequired, asyncHandler(async (
 }));
 
 app.delete("/api/promotions/:id", authRequired, adminRequired, asyncHandler(async (req, res) => {
+  if (useJsonFallback && jsonData) {
+    jsonData.promotions = (jsonData.promotions || []).filter(x => x.id !== req.params.id);
+    saveJsonData();
+    return res.status(204).end();
+  }
+
   await pool.query("DELETE FROM promotions WHERE id = ?", [req.params.id]);
   res.status(204).end();
 }));
@@ -831,6 +920,15 @@ app.delete("/api/promotions/:id", authRequired, adminRequired, asyncHandler(asyn
 app.post("/api/news", authRequired, adminRequired, asyncHandler(async (req, res) => {
   const id = crypto.randomUUID();
   const { title, text, image } = req.body;
+  
+  if (useJsonFallback && jsonData) {
+    if (!jsonData.news) jsonData.news = [];
+    const newItem = { id, title, text, image, date: new Date().toISOString() };
+    jsonData.news.push(newItem);
+    saveJsonData();
+    return res.status(201).json(newItem);
+  }
+
   await pool.query(
     "INSERT INTO news (id, title, text, image) VALUES (?, ?, ?, ?)",
     [id, title, text, image]
@@ -840,6 +938,15 @@ app.post("/api/news", authRequired, adminRequired, asyncHandler(async (req, res)
 
 app.put("/api/news/:id", authRequired, adminRequired, asyncHandler(async (req, res) => {
   const { title, text, image } = req.body;
+  
+  if (useJsonFallback && jsonData) {
+    const idx = (jsonData.news || []).findIndex(x => x.id === req.params.id);
+    if (idx === -1) return res.status(404).json({ message: "Новость не найдена." });
+    jsonData.news[idx] = { ...jsonData.news[idx], title, text, image };
+    saveJsonData();
+    return res.json(jsonData.news[idx]);
+  }
+
   await pool.query(
     "UPDATE news SET title=?, text=?, image=? WHERE id=?",
     [title, text, image, req.params.id]
@@ -848,6 +955,12 @@ app.put("/api/news/:id", authRequired, adminRequired, asyncHandler(async (req, r
 }));
 
 app.delete("/api/news/:id", authRequired, adminRequired, asyncHandler(async (req, res) => {
+  if (useJsonFallback && jsonData) {
+    jsonData.news = (jsonData.news || []).filter(x => x.id !== req.params.id);
+    saveJsonData();
+    return res.status(204).end();
+  }
+
   await pool.query("DELETE FROM news WHERE id = ?", [req.params.id]);
   res.status(204).end();
 }));
@@ -856,6 +969,15 @@ app.delete("/api/news/:id", authRequired, adminRequired, asyncHandler(async (req
 app.post("/api/services", authRequired, adminRequired, asyncHandler(async (req, res) => {
   const id = crypto.randomUUID();
   const { name, description, price, icon } = req.body;
+  
+  if (useJsonFallback && jsonData) {
+    if (!jsonData.services) jsonData.services = [];
+    const newItem = { id, name, description, price, icon };
+    jsonData.services.push(newItem);
+    saveJsonData();
+    return res.status(201).json(newItem);
+  }
+
   await pool.query(
     "INSERT INTO services (id, name, description, price, icon) VALUES (?, ?, ?, ?, ?)",
     [id, name, description, price, icon]
@@ -865,6 +987,15 @@ app.post("/api/services", authRequired, adminRequired, asyncHandler(async (req, 
 
 app.put("/api/services/:id", authRequired, adminRequired, asyncHandler(async (req, res) => {
   const { name, description, price, icon } = req.body;
+  
+  if (useJsonFallback && jsonData) {
+    const idx = (jsonData.services || []).findIndex(x => x.id === req.params.id);
+    if (idx === -1) return res.status(404).json({ message: "Услуга не найдена." });
+    jsonData.services[idx] = { ...jsonData.services[idx], name, description, price, icon };
+    saveJsonData();
+    return res.json(jsonData.services[idx]);
+  }
+
   await pool.query(
     "UPDATE services SET name=?, description=?, price=?, icon=? WHERE id=?",
     [name, description, price, icon, req.params.id]
@@ -873,6 +1004,10 @@ app.put("/api/services/:id", authRequired, adminRequired, asyncHandler(async (re
 }));
 
 app.get("/api/products/:id/reviews", asyncHandler(async (req, res) => {
+  if (useJsonFallback && jsonData) {
+    const rows = (jsonData.reviews || []).filter(r => r.productId === req.params.id);
+    return res.json(rows.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)));
+  }
   const [rows] = await pool.query("SELECT * FROM reviews WHERE productId = ? ORDER BY createdAt DESC", [req.params.id]);
   res.json(rows);
 }));
@@ -881,21 +1016,49 @@ app.post("/api/products/:id/reviews", authRequired, asyncHandler(async (req, res
   const { rating, text } = req.body || {};
   if (!rating || !text) return res.status(400).json({ message: "Заполните все поля." });
   
-  const [users] = await pool.query("SELECT * FROM users WHERE id = ?", [req.userId]);
-  const user = users[0];
+  let user;
+  if (useJsonFallback && jsonData) {
+    user = (jsonData.users || []).find(u => u.id === req.userId);
+  } else {
+    const [users] = await pool.query("SELECT * FROM users WHERE id = ?", [req.userId]);
+    user = users[0];
+  }
+
   if (!user) return res.status(401).json({ message: "Пользователь не найден." });
 
   const id = crypto.randomUUID();
+  const newReview = {
+    id,
+    productId: req.params.id,
+    userId: user.id,
+    userName: user.name,
+    rating,
+    text,
+    createdAt: new Date().toISOString()
+  };
+
+  if (useJsonFallback && jsonData) {
+    if (!jsonData.reviews) jsonData.reviews = [];
+    jsonData.reviews.push(newReview);
+    saveJsonData();
+    return res.status(201).json(newReview);
+  }
+
   await pool.query(
     "INSERT INTO reviews (id, productId, userId, userName, rating, text) VALUES (?, ?, ?, ?, ?, ?)",
     [id, req.params.id, user.id, user.name, rating, text]
   );
   
-  const [newReview] = await pool.query("SELECT * FROM reviews WHERE id = ?", [id]);
-  res.status(201).json(newReview[0]);
+  res.status(201).json(newReview);
 }));
 
 app.delete("/api/services/:id", authRequired, adminRequired, asyncHandler(async (req, res) => {
+  if (useJsonFallback && jsonData) {
+    jsonData.services = (jsonData.services || []).filter(x => x.id !== req.params.id);
+    saveJsonData();
+    return res.status(204).end();
+  }
+
   await pool.query("DELETE FROM services WHERE id = ?", [req.params.id]);
   res.status(204).end();
 }));
